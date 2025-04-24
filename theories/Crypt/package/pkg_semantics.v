@@ -53,11 +53,11 @@ Arguments ropr {_ _ _} _ _.
 
 *)
 Fixpoint repr {A : choiceType} (p : raw_code A) :
-  rFreeF (@ops_StP heap_choiceType) (@ar_StP heap_choiceType) A :=
+  rFreeF (@ops_StP heap) (@ar_StP heap) A :=
   match p with
   | ret x => retrFree x
   | opr o x k =>
-      repr (k (chCanonical (chtgt o)))
+      repr (k initial)
   | getr l k =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s l)))
@@ -86,9 +86,9 @@ Proof.
 Qed.
 
 Definition repr_cmd {A} (c : command A) :
-  rFreeF (@ops_StP heap_choiceType) (@ar_StP heap_choiceType) A :=
+  rFreeF (@ops_StP heap) (@ar_StP heap) A :=
   match c with
-  | cmd_op o x => retrFree (chCanonical (chtgt o))
+  | cmd_op o x => retrFree initial
   | cmd_get ℓ =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s ℓ)))

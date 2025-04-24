@@ -51,11 +51,9 @@ Definition Location := nat * choice_type.
 
 Definition Locations := {fmap nat → choice_type}.
 
-Definition loc_type (l : Location) := l.2.
+Definition loc_type (l : Location) : count1Type := l.2.
 
-Coercion loc_type : Location >-> choice_type.
-
-Definition Value (t : choice_type) := chElement t.
+Coercion loc_type : Location >-> count1Type.
 
 Definition Interface := {fmap ident → choice_type * choice_type}.
 
@@ -133,7 +131,7 @@ Section FreeModule.
         valid_code (sampler op k)
   .
 
-  Derive NoConfusion NoConfusionHom for choice_type.
+  (*Derive NoConfusion NoConfusionHom for choice_type.*)
   Derive NoConfusion NoConfusionHom EqDec for nat.
   Derive NoConfusion NoConfusionHom for raw_code.
   Derive Signature for valid_code.
@@ -259,8 +257,8 @@ Section FreeModule.
   (* Alternative to bind *)
   Inductive command : choiceType → Type :=
   | cmd_op o (x : src o) : command (tgt o)
-  | cmd_get (ℓ : Location) : command (Value ℓ)
-  | cmd_put (ℓ : Location) (v : Value ℓ) : command unit_choiceType
+  | cmd_get (ℓ : Location) : command ℓ
+  | cmd_put (ℓ : Location) (v : ℓ) : command unit_choiceType
   | cmd_sample op : command (Arit op).
 
   Definition cmd_bind {A B} (c : command A) (k : A → raw_code B) :=

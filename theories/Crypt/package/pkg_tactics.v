@@ -76,7 +76,7 @@ Proof.
 Qed.
 
 #[export] Instance getr_morphism (A : choiceType) (l : Location) :
-  Proper (pointwise_relation (Value l) eq ==> eq) (@getr A l).
+  Proper (pointwise_relation l eq ==> eq) (@getr A l).
 Proof.
   simpl_relation.
   f_equal. apply functional_extensionality. auto.
@@ -232,21 +232,23 @@ Proof.
   apply h.
 Qed.
 
+(*
 Ltac choice_type_eq_prove :=
   lazymatch goal with
   | |- chProd _ _ = chProd _ _ => f_equal ; choice_type_eq_prove
-  | |- chMap _ _ = chMap _ _ => f_equal ; choice_type_eq_prove
+      (*| |- chMap _ _ = chMap _ _ => f_equal ; choice_type_eq_prove*)
   | |- chOption _ = chOption _ => f_equal ; choice_type_eq_prove
   | |- chFin _ = chFin _ => f_equal ; apply positive_ext ; reflexivity
   | |- _ = _ => reflexivity
   end.
+ *)
 
 #[export] Hint Extern 4 (ValidPackage ?L ?I ?E (mkfmap ((?i, mkdef ?A ?B ?f) :: ?p)))
   =>
   eapply valid_package_cons_upto ; [
   | intro
-  | choice_type_eq_prove
-  | choice_type_eq_prove
+  | reflexivity
+  | reflexivity
   ]
   : typeclass_instances ssprove_valid_db.
 

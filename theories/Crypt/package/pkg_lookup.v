@@ -40,12 +40,13 @@ Set Primitive Projections.
 #[local] Open Scope type_scope.
 #[local] Open Scope package_scope.
 
+(*
 (* TODO Is it still needed? *)
 Lemma opaque_me :
   ∀ {B L I E}
     (p : raw_package) (hp : valid_package L I E p)
     (o : opsig) (ho : fhas E o) (arg : src o)
-    (e : lookup_op p o = None),
+    (e : call p o x = None),
     B.
 Proof.
   intros B L I E p hp o ho arg e.
@@ -62,7 +63,9 @@ Proof.
   2:{ noconf ef. congruence. }
   discriminate.
 Qed.
+ *)
 
+(*
 Equations? get_raw_package_op {L} {I E : Interface} (p : raw_package)
   (hp : ValidPackage L I E p)
   (o : opsig) (ho : fhas E o) (arg : src o) : code L I (tgt o) :=
@@ -363,3 +366,4 @@ Proof.
   eapply lookup_op_spec_inv in e. rewrite e.
   reflexivity.
 Qed.
+ *)

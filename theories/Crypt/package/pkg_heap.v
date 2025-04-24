@@ -36,12 +36,12 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Definition pointed_value := ∑ (t : choice_type), t.
 
-Definition raw_heap := {fmap Location -> pointed_value}.
-Definition raw_heap_choiceType := Choice.clone _ raw_heap.
+Definition heap := {fmap nat -> nat}.
+(* Check (heap : choiceType). *)
 
-Definition check_loc_val (l : Location) (v : pointed_value) :=
+(*
+Definition check_loc_val (l : Location) (v : nat) :=
   l.2 == v.π1.
 
 Definition valid_location (h : raw_heap) (l : Location) :=
@@ -83,7 +83,9 @@ Proof.
   intros [h₀ v₀] [h₁ v₁] e. simpl in e. subst.
   f_equal. apply eq_irrelevance.
 Qed.
+ *)
 
+(*
 Definition cast_pointed_value {A} (p : pointed_value) (e : A = p.π1) : Value A.
 Proof.
   subst. exact p.π2.
@@ -131,7 +133,15 @@ Proof.
   unfold check_loc_val in vℓ.
   move: vℓ => /eqP. auto.
 Qed.
+ *)
 
+Definition get_heap (map : heap) (l : Location) : l :=
+  odflt initial (obind unpickle (map l.1)).
+
+Definition set_heap (map : heap) (l : Location) (v : l) : heap :=
+  setm map l.1 (pickle v).
+
+(*
 Equations? get_heap (map : heap) (ℓ : Location) : Value ℓ :=
   get_heap map ℓ with inspect (map ∙1 ℓ) := {
   | @exist (Some p) e => cast_pointed_value p _
@@ -141,7 +151,10 @@ Proof.
   destruct map as [h vh]. simpl in e.
   eapply get_heap_helper. all: eauto.
 Defined.
+ *)
 
+
+(*
 Program Definition set_heap (map : heap) (l : Location) (v : Value l)
 : heap :=
   setm map l (l ; v).
@@ -184,15 +197,13 @@ Next Obligation.
         ** assumption.
   - rewrite andbC. auto.
 Qed.
+ *)
 
-#[program] Definition empty_heap : heap := emptym.
-Next Obligation.
-  by rewrite /valid_heap domm0 /fset_filter -fset0E.
-Qed.
+Definition empty_heap : heap := emptym.
 
 Lemma get_empty_heap :
   ∀ ℓ,
-    get_heap empty_heap ℓ = heap_init ℓ.
+    get_heap empty_heap ℓ = initial.
 Proof.
   intros ℓ. reflexivity.
 Qed.
@@ -201,73 +212,47 @@ Lemma get_set_heap_eq :
   ∀ h ℓ v,
     get_heap (set_heap h ℓ v) ℓ = v.
 Proof.
-  intros h ℓ v.
-  funelim (get_heap (set_heap h ℓ v) ℓ).
-  2:{
-    pose proof e as ep. simpl in ep.
-    rewrite setmE in ep. rewrite eqxx in ep. noconf ep.
-  }
-  try rewrite -Heqcall. clear Heqcall.
-  pose proof e as ep. simpl in ep.
-  rewrite setmE in ep. rewrite eqxx in ep. noconf ep.
-  rewrite (cast_pointed_value_K (ℓ0.2 ; v)).
-  reflexivity.
+  intros h l v.
+  unfold set_heap, get_heap.
+  rewrite setmE eq_refl //= pickleK //.
 Qed.
 
 Lemma get_set_heap_neq :
   ∀ h ℓ v ℓ',
-    ℓ' != ℓ →
+    ℓ'.1 != ℓ.1 →
     get_heap (set_heap h ℓ v) ℓ' = get_heap h ℓ'.
 Proof.
-  intros h ℓ v ℓ' ne.
-  funelim (get_heap (set_heap h ℓ v) ℓ').
-  - try rewrite -Heqcall. clear Heqcall.
-    pose proof e as ep. simpl in ep.
-    rewrite setmE in ep.
-    eapply negbTE in ne. rewrite ne in ep.
-    funelim (get_heap h ℓ).
-    2:{
-      rewrite -e in ep. noconf ep.
-    }
-    try rewrite -Heqcall. clear Heqcall.
-    apply cast_pointed_value_ext.
-    rewrite -e in ep. noconf ep. reflexivity.
-  - try rewrite -Heqcall. clear Heqcall.
-    clear H. simpl in e. rewrite setmE in e.
-    eapply negbTE in ne. rewrite ne in e.
-    funelim (get_heap h ℓ).
-    1:{
-      rewrite -e in e0. noconf e0.
-    }
-    try rewrite -Heqcall. reflexivity.
+  move=> h l v l' /negPf H.
+  unfold set_heap, get_heap.
+  rewrite setmE H //.
 Qed.
 
 Lemma set_heap_contract :
   ∀ s ℓ v v',
     set_heap (set_heap s ℓ v) ℓ v' = set_heap s ℓ v'.
 Proof.
-  intros s ℓ v v'.
-  apply heap_ext. destruct s as [h vh]. simpl.
-  apply setmxx.
+  intros s l v v'.
+  unfold set_heap, get_heap.
+  rewrite setmxx //.
 Qed.
 
+(* MK: remove? symmtric of get_set_heap_neq *)
 Lemma get_heap_set_heap :
   ∀ s ℓ ℓ' v,
-    ℓ != ℓ' →
+    ℓ.1 != ℓ'.1 →
     get_heap s ℓ = get_heap (set_heap s ℓ' v) ℓ.
 Proof.
-  intros s ℓ ℓ' v ne.
-  rewrite get_set_heap_neq. 2: auto.
-  reflexivity.
+  move=> s l l' v H.
+  rewrite get_set_heap_neq //.
 Qed.
 
 Lemma set_heap_commut :
   ∀ s ℓ v ℓ' v',
-    ℓ != ℓ' →
+    ℓ.1 != ℓ'.1 →
     set_heap (set_heap s ℓ v) ℓ' v' =
     set_heap (set_heap s ℓ' v') ℓ v.
 Proof.
-  intros s ℓ v ℓ' v' ne.
-  apply heap_ext. destruct s as [h vh]. simpl.
-  apply setmC. auto.
+  intros s l v l' v' H.
+  unfold set_heap, get_heap.
+  rewrite setmC //.
 Qed.

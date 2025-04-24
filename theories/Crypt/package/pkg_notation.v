@@ -96,7 +96,7 @@
 From Coq Require Import Utf8 Lia.
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import ssrnat ssreflect ssrfun ssrbool ssrnum eqtype
-  choice seq.
+  choice reals distr realsum seq all_algebra fintype.
 Set Warnings "notation-overridden,ambiguous-paths".
 From extructures Require Import ord fset fmap.
 From SSProve.Crypt Require Import Prelude Axioms ChoiceAsOrd RulesStateProb
@@ -120,36 +120,38 @@ Module PackageNotation.
     to refer to bool by making it a keyword.
   *)
 
-  Notation " 'nat " := (chNat) (in custom pack_type at level 2).
-  Notation " 'int " := (chInt) (in custom pack_type at level 2).
-  Notation " 'bool " := (chBool) (in custom pack_type at level 2).
-  Notation " 'unit " := (chUnit) (in custom pack_type at level 2).
-  Notation " 'word n " := (chWord n) (in custom pack_type at level 2).
-  Notation " 'option x " := (chOption x) (in custom pack_type at level 2).
+  Notation " 'nat " := (nat) (in custom pack_type at level 2).
+  Notation " 'int " := (int) (in custom pack_type at level 2).
+  Notation " 'bool " := (bool) (in custom pack_type at level 2).
+  Notation " 'unit " := (unit) (in custom pack_type at level 2).
+  Notation " 'word n " := (word.word n) (in custom pack_type at level 2).
+  Notation " 'option x " := (option x) (in custom pack_type at level 2).
 
   Notation " 'fin n " :=
-    (chFin (mkpos n))
+    (n)
     (in custom pack_type at level 2, n constr).
 
+  (*
   Notation "{map x → y }" :=
     (chMap x y)
     (in custom pack_type at level 2, format "{map  x  →  y  }").
+   *)
 
-  Notation " x × y " := (chProd x y) (in custom pack_type at level 2).
-  Notation " x ∐ y " := (chSum x y) (in custom pack_type at level 2).
+  Notation " x × y " := (x * y) (in custom pack_type at level 2).
+  Notation " x ∐ y " := (x + y) (in custom pack_type at level 2).
 
   Notation "( x )" := x (in custom pack_type, x at level 2).
 
   (** Repeat the above notations here for package_scope. *)
-  Notation " 'nat " := (chNat) (at level 2) : package_scope.
-  Notation " 'int " := (chInt) (at level 2) : package_scope.
-  Notation " 'bool " := (chBool) (at level 2) : package_scope.
-  Notation " 'unit " := (chUnit) (at level 2) : package_scope.
-  Notation " 'word n " := (chWord n) (at level 2) : package_scope.
-  Notation " 'option x " := (chOption x) (at level 2) : package_scope.
+  Notation " 'nat " := (nat) (at level 2) : package_scope.
+  Notation " 'int " := (int) (at level 2) : package_scope.
+  Notation " 'bool " := (bool) (at level 2) : package_scope.
+  Notation " 'unit " := (unit) (at level 2) : package_scope.
+  Notation " 'word n " := (word.word n) (at level 2) : package_scope.
+  Notation " 'option x " := (option x) (at level 2) : package_scope.
 
   Notation " 'fin x " :=
-    (chFin (mkpos x))
+    (x)
     (at level 2) : package_scope.
 
   (* Conflicts with this one. *)
@@ -157,8 +159,8 @@ Module PackageNotation.
     (chMap x y)
     (at level 80, format "{map  x  →  y  }") : package_scope. *)
 
-  Notation " x × y " := (chProd x y) (at level 80) : package_scope.
-  Notation " x ∐ y " := (chSum x y) (at level 80) : package_scope.
+  Notation " x × y " := (x * y) (at level 80) : package_scope.
+  Notation " x ∐ y " := (x + y) (at level 80) : package_scope.
 
   Notation "[ 'interface' ]" :=
     (mkfmap [::] : Interface)
@@ -329,11 +331,13 @@ Module PackageNotation.
   (** Utility for fin types *)
 
   (** m : 'fin n *)
+  (*
   Lemma give_fin {m} (n : nat) {h : Lt n m} : ('fin m)%pack.
   Proof.
     cbn. exists n. exact h.
   Defined.
 
   Notation gfin n := (give_fin n).
+   *)
 
 End PackageNotation.

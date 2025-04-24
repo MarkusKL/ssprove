@@ -25,91 +25,16 @@ Section Interpreter.
 
   Context (sample : ∀ (e : choice_type), nat → option (nat * e)).
 
-  Inductive NatState :=
-  | NSUnit
-  | NSNat (n : nat)
-  | NSOption (A : option NatState)
-  | NSProd (A B : NatState).
+  Definition NatState := nat.
 
-  Equations? nat_ch_aux (x : NatState) (l : choice_type) : option (Value l) :=
-    nat_ch_aux (NSUnit) 'unit := Some Datatypes.tt ;
-    nat_ch_aux (NSNat n) 'nat := Some n ;
-    nat_ch_aux (NSNat n) 'bool := Some (Nat.odd n) ;
-    nat_ch_aux (NSNat n) 'fin n' := Some _ ;
-    nat_ch_aux (NSOption (Some a)) ('option l) := Some (nat_ch_aux a l) ;
-    nat_ch_aux (NSOption None) ('option l) := Some None ;
-    nat_ch_aux (NSProd a b) (l1 × l2) with (nat_ch_aux a l1, nat_ch_aux b l2) := {
-         nat_ch_aux (NSProd a b) (l1 × l2) (Some v1, Some v2) := Some (v1, v2) ;
-         nat_ch_aux (NSProd a b) (l1 × l2) _ := None ;
-      } ;
-    nat_ch_aux (NSNat n) ('word u) := Some _ ;
-    nat_ch_aux _ _ := None.
-  Proof.
-    - eapply @Ordinal.
-      instantiate (1 := n %% n').
-      apply ltn_pmod.
-      apply cond_pos0.
-    - apply wrepr.
-      apply (BinInt.Z.of_nat n).
-  Defined.
-
-  Definition nat_ch (x : option NatState) (l : choice_type) : option (Value l) :=
+  Definition nat_ch (x : option NatState) (l : choice_type) : option l :=
     match x with
-    | Some v => nat_ch_aux v l
+    | Some v => unpickle v
     | None => None
     end.
 
-  Equations ch_nat (l : choice_type) (v : l) : option NatState :=
-    ch_nat 'unit v := Some NSUnit ;
-    ch_nat 'nat v := Some (NSNat v) ;
-    ch_nat 'bool v := Some (NSNat v) ;
-    ch_nat 'fin n v := Some (NSNat v) ;
-    ch_nat (l1 × l2) (pair v1 v2) :=
-      match (ch_nat l1 v1, ch_nat l2 v2) with
-        | (Some v, Some v') => Some (NSProd v v')
-        | _ => None
-      end ;
-    ch_nat 'option l (Some v) :=
-      match (ch_nat l v) with
-        | Some v' => Some (NSOption (Some v'))
-        | _ => None
-      end ;
-    ch_nat 'option l None := Some (NSOption None) ;
-    ch_nat 'word u x := Some (NSNat (BinInt.Z.to_nat (wunsigned x))) ;
-    ch_nat _ _ := None.
-
-  Lemma ch_nat_ch l v:
-    match (ch_nat l v) with
-      | Some k => nat_ch (Some k) l = Some v
-      | _ => true
-    end.
-  Proof.
-    funelim (ch_nat l v). all: try easy.
-    - simpl. by destruct v.
-    - simp ch_nat. simpl. simp nat_ch_aux. by destruct v.
-    - simp ch_nat. destruct (ch_nat l1 v1), (ch_nat l2 v2); try easy.
-      cbn. simp nat_ch_aux. simpl in *. now rewrite H H0.
-    - simp ch_nat. destruct ch_nat; try easy.
-      simpl in *. simp nat_ch_aux. now f_equal.
-    - simp ch_nat. simpl. simp nat_ch_aux.
-      f_equal.
-      unfold nat_ch_aux_obligation_1.
-      have lv := ltn_ord v.
-      apply /eqP.
-      erewrite <- inj_eq.
-      2: apply ord_inj.
-      simpl.
-      rewrite modn_small.
-      2: assumption.
-      done.
-    - simp ch_nat. simpl. simp nat_ch_aux.
-      f_equal.
-      unfold nat_ch_aux_obligation_2.
-      rewrite @Znat.Z2Nat.id.
-      + rewrite wrepr_unsigned.
-        reflexivity.
-      + apply (@wunsigned_range u).
-  Qed.
+  Definition ch_nat (l : choice_type) (v : l) : option NatState :=
+    Some (pickle v).
 
   Definition new_state
              (st : Location → option NatState) (l : Location) (v : l) : (Location → option NatState)
@@ -139,7 +64,7 @@ Section Interpreter.
     end.
 
   Definition Run {A} :=
-    (fun c seed => @Run_aux A c seed (fun (l : Location) => Some NSUnit)).
+    (fun c seed => @Run_aux A c seed (fun (l : Location) => Some 0)).
 
   #[program] Fixpoint sampler (e : choice_type) seed : option (nat * e):=
     match e with

@@ -47,9 +47,9 @@ Definition Game_import : Interface := [interface].
 Definition Game_Type (Game_export : Interface) : Type :=
   loc_package Game_import Game_export.
 
-Definition RUN := (0%N, ('unit, 'bool)).
+Definition RUN : opsig := mkopsig 0%N unit bool.
 
-Definition A_export : Interface := mkfmap [:: RUN ].
+Definition A_export : Interface := [fmap RUN ].
 
 Lemma RUN_in_A_export : A_export RUN.1 = Some RUN.2.
 Proof.
@@ -68,17 +68,17 @@ Definition Game_import_P : Game_op_import_S → choiceType :=
   λ v, let 'existT a b := v in match b with end.
 
 Definition Pr_code {A} (p : raw_code A) :
-  heap_choiceType → SDistr (F_choice_prod_obj ⟨ A , heap_choiceType ⟩) :=
+  heap → SDistr (F_choice_prod_obj ⟨ A , heap : ord_choiceType ⟩) :=
   λ s, thetaFstd A (repr p) s.
 
 (* TODO REMOVE? *)
 Definition Pr_raw_func_code {A B} (p : A → raw_code B) :
-  A → heap_choiceType → SDistr (F_choice_prod_obj ⟨ B , heap_choiceType ⟩) :=
+  A → heap → SDistr (F_choice_prod_obj ⟨ B , heap : ord_choiceType ⟩) :=
   λ a s, Pr_code (p a) s.
 
 Definition Pr_op (p : raw_package) (o : opsig) (x : src o) :
-  heap_choiceType → SDistr (F_choice_prod_obj ⟨ tgt o , heap_choiceType ⟩) :=
-  Pr_code (get_op_default p o x).
+  heap → SDistr (F_choice_prod_obj ⟨ tgt o , heap : ord_choiceType ⟩) :=
+  Pr_code (call p o x).
 
 Arguments SDistr_bind {_ _}.
 
@@ -152,7 +152,7 @@ Qed. *)
   : package_scope. *)
 
 Definition state_pass_ {A} (p : raw_code A) :
-  heap_choiceType → raw_code (prod A heap_choiceType).
+  heap → raw_code (prod A heap).
 Proof.
   induction p; intros h.
   - constructor.

@@ -121,14 +121,15 @@ Section RelativeFreeMonad.
 
 End RelativeFreeMonad.
 
+
 Section Unary_free_prob_monad.
 
   (* the type of probabilistic operations*)
-  Definition P_OP  := { X : choice_type & SDistr X }.
+  Definition P_OP  := { X : count1Type & SDistr X }.
 
   (* the arities for operations in OPP*)
   Definition P_AR : P_OP -> choiceType :=
-    fun op => chElement ( projT1 op ).
+    fun op => projT1 op.
 
   Definition rFreePr := rFree P_OP P_AR.
 

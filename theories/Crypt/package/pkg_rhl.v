@@ -65,7 +65,7 @@ Proof.
 Qed.
 
 Lemma get_case :
-  ∀ LA (I : heap_choiceType * heap_choiceType → Prop) ℓ,
+  ∀ LA (I : heap * heap → Prop) ℓ,
     INV LA I →
     fhas LA ℓ →
     r⊨ ⦃ λ '(s₀, s₃), I (s₀, s₃) ⦄
@@ -103,7 +103,7 @@ Proof.
 Qed.
 
 Lemma put_case :
-  ∀ {LA} (I : heap_choiceType * heap_choiceType → Prop) l v,
+  ∀ {LA} (I : heap* heap → Prop) l v,
     INV LA I →
     fhas LA l →
     r⊨ ⦃ λ '(s0, s3), I (s0, s3) ⦄
@@ -225,7 +225,7 @@ Qed.
 
 (* TODO This proof is really the same as cmd_sample_preserve_pre *)
 Lemma sampler_case :
-  ∀ {LA} (I : heap_choiceType * heap_choiceType -> Prop) op,
+  ∀ {LA} (I : heap * heap -> Prop) op,
     INV LA I →
     r⊨ ⦃ λ '(s0, s3), I (s0, s3) ⦄
       sampler op [eta ret (A:=Arit op)] ≈ sampler op [eta ret (A:=Arit op)]
@@ -237,7 +237,7 @@ Proof.
   destruct op as [opA opB].
   pose (d :=
     SDistr_bind (λ x, SDistr_unit _ ((x, s₀), (x, s₁)))
-      (Theta_dens.unary_ThetaDens0 _ (ropr (opA ; opB) (λ x : chElement opA, retrFree x)))
+      (Theta_dens.unary_ThetaDens0 _ (ropr (opA ; opB) (λ x : opA, retrFree x)))
   ).
   exists d. split.
   - unfold coupling. split.
@@ -316,14 +316,14 @@ Definition eq_up_to_inv (E : Interface) (I : precond) (p₀ p₁ : raw_package) 
   ∀ (id : ident) (S T : choice_type) (x : S),
     fhas E (id, (S, T)) →
     ⊢ ⦃ λ '(s₀, s₁), I (s₀, s₁) ⦄
-      get_op_default p₀ (id, (S, T)) x ≈ get_op_default p₁ (id, (S, T)) x
+      call p₀ (id, (S, T)) x ≈ call p₁ (id, (S, T)) x
       ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ I (s₀, s₁) ⦄.
 
 Lemma Pr_eq_empty :
   ∀ {X Y : ord_choiceType}
-    {A : pred (X * heap_choiceType)} {B : pred (Y * heap_choiceType)}
+    {A : pred (X * heap)} {B : pred (Y * heap)}
     Ψ ϕ
-    (c1 : @FrStP heap_choiceType X) (c2 : @FrStP heap_choiceType Y),
+    (c1 : @FrStP heap X) (c2 : @FrStP heap Y),
     ⊨ ⦃ Ψ ⦄ c1 ≈ c2 ⦃ ϕ ⦄ →
     Ψ (empty_heap, empty_heap) →
     (∀ x y, ϕ x y → (A x) ↔ (B y)) →
@@ -353,7 +353,7 @@ Proof.
     unfold Basics.flip, SPropMonadicStructures.SProp_order.
     intros [HI Hp].
     apply Hp. intuition auto.
-  - cbn - [semantic_judgement lookup_op].
+  - cbn - [semantic_judgement].
     apply inversion_valid_opr in vA as hA. destruct hA as [hi vk].
     destruct o as [id [S T]].
     eapply from_valid_package in vp₀.
@@ -362,11 +362,9 @@ Proof.
     eapply from_valid_package in vp₁.
     specialize (vp₁ _ hi). simpl in vp₁.
     destruct vp₁ as [f₁ [e₁ h₁]].
-    erewrite lookup_op_spec_inv. 2: eauto.
-    erewrite lookup_op_spec_inv. 2: eauto.
+    rewrite /call e₀ e₁ 2!coe_code_funE.
     specialize (hp id S T x hi).
-    erewrite get_op_default_spec in hp. 2: eauto.
-    erewrite get_op_default_spec in hp. 2: eauto.
+    rewrite /call e₀ e₁ 2!coe_code_funE in hp.
     rewrite !repr_bind.
     eapply bind_rule_pp. 1:{ eapply to_sem_jdg in hp. exact hp. }
     cbn - [semantic_judgement].
@@ -428,16 +426,12 @@ Lemma eq_upto_pinv_perf_ind :
 Proof.
   intros P0 P1 L₀ L₁ LA E p₀ p₁ I A vp₀ vp₁ vA hI' hIe hd₀ hd₁ hp.
   unfold AdvantageE, Pr.
-  pose r := get_op_default A RUN tt.
+  pose r := call A RUN tt.
   assert (hI : INV LA I). 1: eapply pINV'_to_INV; eauto.
   unshelve epose proof (eq_up_to_inv_adversary_link p₀ p₁ I r hI hp) as h.
-  1:{
-    eapply valid_get_op_default.
-    - eauto.
-    - fmap_solve.
-  }
+  1: eapply valid_call; [ eauto | done ].
   assert (
-    ∀ x y : tgt RUN * heap_choiceType,
+    ∀ x y : tgt RUN * heap,
       (let '(b₀, s₀) := x in λ '(b₁, s₁), b₀ = b₁ ∧ I (s₀, s₁)) y →
       (fst x == true) ↔ (fst y == true)
   ) as Ha.
@@ -453,7 +447,7 @@ Proof.
     unfold Pr_op. unfold Pr_code.
     unfold thetaFstd. simpl. apply f_equal2. 2: reflexivity.
     apply f_equal. apply f_equal.
-    rewrite get_op_default_link. reflexivity.
+    rewrite call_link //.
   }
   unfold lhs in he. unfold Pr_op in he.
   rewrite he.
@@ -465,7 +459,7 @@ Proof.
     unfold Pr_op. unfold Pr_code.
     unfold thetaFstd. simpl. apply f_equal2. 2: reflexivity.
     apply f_equal. apply f_equal.
-    rewrite get_op_default_link. reflexivity.
+    rewrite call_link //.
   }
   unfold lhs' in e'. unfold Pr_op in e'.
   rewrite e'.
@@ -473,7 +467,7 @@ Proof.
   unfold SDistr_bind. unfold SDistr_unit.
   rewrite !dletE.
   assert (
-    ∀ x : bool_choiceType * heap_choiceType,
+    ∀ x : bool_choiceType * heap,
       ((let '(b, _) := x in dunit (R:=R) (T:=bool_choiceType) b) true) ==
       (x.1 == true)%:R
   ) as h1.
@@ -482,8 +476,8 @@ Proof.
   }
   assert (
     ∀ y,
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (x.1 == true)%:R * (y x))
+      (λ x : prod_choiceType (tgt RUN) heap, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
+      (λ x : prod_choiceType (tgt RUN) heap, (x.1 == true)%:R * (y x))
   ) as Hrew.
 
   { intros y. extensionality x.
@@ -526,7 +520,7 @@ Lemma eq_upto_inv_perf_ind :
 Proof.
   intros L₀ L₁ LA E p₀ p₁ I A vp₀ vp₁ vA hI' hIe hd₀ hd₁ hp.
   unfold AdvantageE, Pr.
-  pose r := get_op_default A RUN tt.
+  pose r := call A RUN tt.
   assert (hI : INV LA I).
   { unfold INV. intros s₀ s₁. split.
     - intros hi l hin. apply hI'.
@@ -539,13 +533,9 @@ Proof.
       + move: hd₁ => /fdisjointP hd₁. apply hd₁. by apply fhas_in.
   }
   unshelve epose proof (eq_up_to_inv_adversary_link p₀ p₁ I r hI hp) as h.
-  1:{
-    eapply valid_get_op_default.
-    - eauto.
-    - apply RUN_in_A_export.
-  }
+  1: eapply valid_call; [ eauto | done ].
   assert (
-    ∀ x y : tgt RUN * heap_choiceType,
+    ∀ x y : tgt RUN * heap,
       (let '(b₀, s₀) := x in λ '(b₁, s₁), b₀ = b₁ ∧ I (s₀, s₁)) y →
       (fst x == true) ↔ (fst y == true)
   ) as Ha.
@@ -561,7 +551,7 @@ Proof.
     unfold Pr_op. unfold Pr_code.
     unfold thetaFstd. simpl. apply f_equal2. 2: reflexivity.
     apply f_equal. apply f_equal.
-    rewrite get_op_default_link. reflexivity.
+    rewrite call_link //.
   }
   unfold lhs in he. unfold Pr_op in he.
   rewrite he.
@@ -573,7 +563,7 @@ Proof.
     unfold Pr_op. unfold Pr_code.
     unfold thetaFstd. simpl. apply f_equal2. 2: reflexivity.
     apply f_equal. apply f_equal.
-    rewrite get_op_default_link. reflexivity.
+    rewrite call_link //.
   }
   unfold lhs' in e'. unfold Pr_op in e'.
   rewrite e'.
@@ -581,7 +571,7 @@ Proof.
   unfold SDistr_bind. unfold SDistr_unit.
   rewrite !dletE.
   assert (
-    ∀ x : bool_choiceType * heap_choiceType,
+    ∀ x : bool_choiceType * heap,
       ((let '(b, _) := x in dunit (R:=R) (T:=bool_choiceType) b) true) ==
       (x.1 == true)%:R
   ) as h1.
@@ -590,8 +580,8 @@ Proof.
   }
   assert (
     ∀ y,
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (x.1 == true)%:R * (y x))
+      (λ x : prod_choiceType (tgt RUN) heap, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
+      (λ x : prod_choiceType (tgt RUN) heap, (x.1 == true)%:R * (y x))
   ) as Hrew.
   { intros y. extensionality x.
     destruct x as [x1 x2].
@@ -1061,7 +1051,7 @@ Proof.
 Qed.
 
 Definition spl (o : Op) :=
-  @callrFree (@ops_StP heap_choiceType) (@ar_StP heap_choiceType) (op_iota o).
+  @callrFree (@ops_StP heap) (@ar_StP heap) (op_iota o).
 
 Lemma rsamplerC :
   ∀ {A : ord_choiceType} (o : Op) (c : raw_code A),
@@ -1402,7 +1392,7 @@ Proof.
   destruct op as [opA opB].
   pose (d :=
     SDistr_bind (λ x, SDistr_unit _ ((x, s₀), (x, s₁)))
-      (Theta_dens.unary_ThetaDens0 _ (ropr (opA ; opB) (λ x : chElement opA, retrFree x)))
+      (Theta_dens.unary_ThetaDens0 _ (ropr (opA ; opB) (λ x : opA, retrFree x)))
   ).
   exists d. split.
   - unfold coupling. split.
@@ -2415,19 +2405,19 @@ Qed.
 (** Rules on uniform distributions  *)
 
 Lemma r_uniform_bij :
-  ∀ {A₀ A₁ : ord_choiceType} i j `{Positive i} `{Positive j} pre post f
+  ∀ {A₀ A₁ : ord_choiceType} {F G : fin1Type} pre post f
     (c₀ : _ → raw_code A₀) (c₁ : _ → raw_code A₁),
     bijective f →
     (∀ x, ⊢ ⦃ pre ⦄ c₀ x ≈ c₁ (f x) ⦃ post ⦄) →
     ⊢ ⦃ pre ⦄
-      x ← sample uniform i ;; c₀ x ≈
-      x ← sample uniform j ;; c₁ x
+      x ← sample uniform F ;; c₀ x ≈
+      x ← sample uniform G ;; c₁ x
     ⦃ post ⦄.
 Proof.
-  intros A₀ A₁ i j pi pj pre post f c₀ c₁ bijf h.
+  intros A₀ A₁ F G pre post f c₀ c₁ bijf h.
   eapply from_sem_jdg.
-  change (repr (sampler (uniform ?i) ?k))
-  with (bindrFree (@Uniform_F (mkpos i) heap_choiceType) (λ x, repr (k x))).
+  change (repr (sampler (uniform ?F) ?k))
+  with (bindrFree (@Uniform_F F heap) (λ x, repr (k x))).
   eapply bind_rule_pp.
   - eapply Uniform_bij_rule. eauto.
   - intros a₀ a₁. simpl.
@@ -2455,51 +2445,49 @@ Section Uniform_prod.
   Arguments uniform_F [_] _.
 
   Lemma uniform_F_prod_bij :
-    ∀ i j `{Positive i} `{Positive j} (x : 'I_i) (y : 'I_j),
+    ∀ {F G : fin1Type} (x : F) (y : G),
       mkdistr
-        (mu := λ _ : 'I_i * 'I_j, r (x, y))
+        (mu := λ _ : F * G, r (x, y))
         (@is_uniform _ (x,y))
       =
       SDistr_bind
-        (λ z : 'I_(i * j),
-          SDistr_unit _ (ch2prod z)
+        (λ z : F * G,
+          SDistr_unit _ z
         )
         (mkdistr
-          (mu := λ f : 'I_(i * j), r f)
-          (@is_uniform _ (F_w0 (mkpos (i * j))))
+        (mu := λ f : F * G, r f)
+          (@is_uniform _ initial)
         ).
   Proof.
-    intros i j pi pj x y.
+    intros F G x y.
     apply distr_ext. simpl. intros [a b].
     unfold SDistr_bind. rewrite dletE. simpl.
     rewrite psumZ.
     2:{
-      unshelve eapply @r_nonneg. eapply ordinal_finType_inhabited.
-      exact _.
+      unshelve eapply @r_nonneg. apply (a, b).
     }
     unfold r. rewrite card_prod. simpl.
-    rewrite !card_ord.
     unfold SDistr_unit. unfold dunit. unlock. unfold drat. unlock. simpl.
     unfold mrat. simpl.
     erewrite eq_psum.
     2:{
       simpl. intro u. rewrite GRing.divr1. rewrite addn0. reflexivity.
     }
-    erewrite psum_finseq with (r := [:: prod2ch (a, b)]).
+    erewrite psum_finseq with (r := [:: (a, b)]).
     2: reflexivity.
     2:{
       simpl. intros u hu. rewrite inE in hu.
-      destruct (ch2prod u == (a,b)) eqn:e.
+      destruct (u == (a,b)) eqn:e.
       2:{
         exfalso.
         move: hu => /negP hu. apply hu.
         by [rewrite e].
       }
       move: e => /eqP e. rewrite -e.
-      rewrite inE. apply /eqP. symmetry. apply prod2ch_ch2prod.
+      rewrite inE //.
     }
     rewrite bigop.big_cons bigop.big_nil.
-    rewrite ch2prod_prod2ch. rewrite eqxx. simpl.
+    rewrite eqxx. simpl.
     rewrite GRing.addr0. rewrite normr1.
     rewrite GRing.mulr1. reflexivity.
   Qed.
@@ -2519,34 +2507,34 @@ Section Uniform_prod.
   Qed.
 
   Lemma UniformIprod_UniformUniform :
-    ∀ (i j : nat) `{Positive i} `{Positive j},
+    ∀ {F G : fin1Type},
       ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xy ← sample uniform (i * j) ;; ret (ch2prod xy) ≈
-        x ← sample uniform i ;; y ← sample uniform j ;; ret (x, y)
+        xy ← sample uniform (F * G)%type ;; ret xy ≈
+        x ← sample uniform F ;; y ← sample uniform G ;; ret (x, y)
       ⦃ eq ⦄.
   Proof.
-    intros i j pi pj.
+    intros F G.
     change (
       ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xy ← cmd (cmd_sample (uniform (i * j))) ;;
-        ret (ch2prod xy)
+        xy ← cmd (cmd_sample (uniform (F * G)%type)) ;;
+        ret xy
         ≈
-        x ← cmd (cmd_sample (uniform i)) ;;
-        y ← cmd (cmd_sample (uniform j)) ;;
+        x ← cmd (cmd_sample (uniform F)) ;;
+        y ← cmd (cmd_sample (uniform G)) ;;
         ret (x, y)
       ⦃ eq ⦄
     ).
     eapply from_sem_jdg.
     repeat setoid_rewrite repr_cmd_bind.
     change (repr_cmd (cmd_sample (uniform ?i)))
-    with (@Uniform_F (mkpos i) heap_choiceType).
+    with (@Uniform_F i heap).
     cbn - [semantic_judgement Uniform_F].
     eapply rewrite_eqDistrR. 1: apply: reflexivity_rule.
     intro s. cbn.
     pose proof @prod_uniform as h.
-    specialize (h (Finite.clone _ 'I_i) (Finite.clone _ 'I_j)). simpl in h.
+    specialize (h F G). simpl in h.
     unfold Uni_W'. unfold Uni_W.
-    specialize (h (F_w0 (mkpos _)) (F_w0 (mkpos _))).
+    specialize (h initial initial).
     unfold uniform_F in h.
     rewrite uniform_F_prod_bij in h.
     eapply (f_equal (SDistr_bind (λ x, SDistr_unit _ (x, s)))) in h.
@@ -2578,19 +2566,19 @@ Section Uniform_prod.
 End Uniform_prod.
 
 Lemma r_uniform_prod :
-  ∀ {A : ord_choiceType} i j `{Positive i} `{Positive j}
-    (r : fin_family (mkpos i) → fin_family (mkpos j) → raw_code A),
+  ∀ {A : count1Type} {F G : fin1Type}
+    (r : F → G → raw_code A),
     (∀ x y, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y ≈ r x y ⦃ eq ⦄) →
     ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      xy ← sample uniform (i * j) ;; let '(x,y) := ch2prod xy in r x y ≈
-      x ← sample uniform i ;; y ← sample uniform j ;; r x y
+    xy ← sample uniform (F * G)%type ;; let '(x,y) := xy in r x y ≈
+      x ← sample uniform F ;; y ← sample uniform G ;; r x y
     ⦃ eq ⦄.
 Proof.
-  intros A i j pi pj r h.
+  intros A F G r h.
   change (
     ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      '(x,y) ← (z ← sample (uniform (i * j)) ;; ret (ch2prod z)) ;; r x y ≈
-      '(x,y) ← (x ← sample uniform i ;; y ← sample uniform j ;; ret (x, y)) ;; r x y
+      '(x,y) ← (z ← sample (uniform (F * G)%type) ;; ret z) ;; r x y ≈
+      '(x,y) ← (x ← sample uniform F ;; y ← sample uniform G ;; ret (x, y)) ;; r x y
     ⦃ eq ⦄
   ).
   eapply r_bind.
@@ -2904,7 +2892,7 @@ Qed.
 
 Lemma r_put_swap :
   ∀ ℓ ℓ' v v' (A : choiceType) (u : A),
-    ℓ != ℓ' →
+    ℓ.1 != ℓ'.1 →
     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
       #put ℓ := v ;; #put ℓ' := v' ;; ret u ≈
       #put ℓ' := v' ;; #put ℓ := v ;; ret u
@@ -2946,7 +2934,7 @@ Qed.
 
 Lemma r_get_put_swap :
   ∀ ℓ ℓ' v,
-    ℓ' != ℓ →
+    ℓ'.1 != ℓ.1 →
     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
       x ← get ℓ' ;; #put ℓ := v ;; ret x ≈
       #put ℓ := v ;; x ← get ℓ' ;; ret x
@@ -2990,7 +2978,7 @@ Qed.
 
 Lemma r_put_get_swap :
   ∀ ℓ ℓ' v,
-    ℓ' != ℓ →
+    ℓ'.1 != ℓ.1 →
     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
       #put ℓ := v ;; x ← get ℓ' ;; ret x ≈
       x ← get ℓ' ;; #put ℓ := v ;; ret x
@@ -3005,7 +2993,7 @@ Qed.
 
 Lemma r_get_put_swap' :
   ∀ ℓ ℓ' v,
-    ℓ' != ℓ →
+    ℓ'.1 != ℓ.1 →
     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
       x ← get ℓ' ;; #put ℓ := v ;; ret (x, Datatypes.tt) ≈
       #put ℓ := v ;; x ← get ℓ' ;; ret (x, Datatypes.tt)
@@ -3021,7 +3009,7 @@ Qed.
 
 Lemma r_put_get_swap' :
   ∀ ℓ ℓ' v,
-    ℓ' != ℓ →
+    ℓ'.1 != ℓ.1 →
     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
       #put ℓ := v ;; x ← get ℓ' ;; ret (Datatypes.tt, x) ≈
       x ← get ℓ' ;; #put ℓ := v ;; ret (Datatypes.tt, x)

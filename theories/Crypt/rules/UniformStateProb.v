@@ -20,28 +20,34 @@ Local Open Scope ring_scope.
 (* general Rules + Rules for uniform distributions over a finite
     family of non-empty finite types *)
 
+(*
 Definition Index : Type := positive.
 
-Definition fin_family (i : Index) : finType := Finite.clone _ (chFin i).
+Definition fin_family (i : Index) : finType := Finite.clone _ ('Z_i).
 
+ *)
+
+(* initial *)
+(*
 Lemma F_w0 :
   forall (i : Index), fin_family i.
 Proof.
   intros i. unfold fin_family. cbn.
-  exists 0%N. eapply i.(cond_pos).
+  by exists 0%N.
 Qed.
+ *)
 
 (* extend the initial parameters for the rules  *)
 
-Definition Uni_W : forall i, SDistr (fin_family i).
-  move=> i. apply (@uniform_F (fin_family i)).
-  apply F_w0.
+Definition Uni_W {T : fin1Type} : SDistr T.
+  apply (@uniform_F T).
+  apply initial.
 Defined.
 
-Definition Uni_W' : forall i, SDistr( chFin i) := Uni_W.
+Definition Uni_W' {T : fin1Type} : SDistr T := Uni_W.
 
 
-Definition Fail_Unit : SDistr chUnit.
+Definition Fail_Unit : SDistr unit.
   exact dnull.
 Defined.
 
@@ -57,25 +63,25 @@ Defined.
 (* Defined. *)
 
 (* Uniform distribution over F *)
-Definition Uniform_F {i : Index} {S : choiceType} : @FrStP S (fin_family i).
+Definition Uniform_F {T : fin1Type} {S : choiceType} : @FrStP S T.
 Proof.
   rewrite /=.
-  rewrite /ops_StP /ar_StP /fin_family.
+  rewrite /ops_StP /ar_StP.
   (* pose usd :=  @uniform_F [finType of chFin i] (inhab i). *)
   unshelve eapply ropr.
   - apply op_iota. unshelve econstructor.
-    + exact (chFin i).
-    + apply Uni_W'.
+    1: apply (T : count1Type).
+    1: apply Uni_W'.
   - rewrite /=. move=> j. eapply retrFree. assumption.
 Defined.
 
-Definition Uniform ( i : Index ) { S : choiceType } { s : S } :=
-  θ_dens (θ0 (@Uniform_F i S) s).
+Definition Uniform {T : fin1Type} { S : choiceType } { s : S } :=
+  θ_dens (θ0 (@Uniform_F T S) s).
 
-Lemma Uniform_eval (i : Index ) {S : choiceType} {s : S} :
-  forall (st : S) (w : fin_family i),
-    @Uniform i S s (w, st) =
-    if st == s then @r (fin_family i) (F_w0 i) else 0.
+Lemma Uniform_eval {T : fin1Type} {S : choiceType} {s : S} :
+  forall (st : S) (w : T),
+    @Uniform T S s (w, st) =
+    if st == s then @r T initial else 0.
 Proof.
   (* move=> st w. rewrite /Uniform /=. *)
   (* case bb : (st == s). *)
@@ -254,9 +260,9 @@ Proof.
 Defined.
 
 
-Definition UniformSQ { i j : Index } { S1 S2 : choiceType } (s1 : S1) (s2 : S2)
-                      { f : fin_family i -> fin_family j } (f_bij : bijective f) :=
-  @UniformFsq_f (fin_family i) (fin_family j) (F_w0 i) (F_w0 j) S1 S2 s1 s2 f f_bij.
+Definition UniformSQ {T S : fin1Type} { S1 S2 : choiceType } (s1 : S1) (s2 : S2)
+                      { f : T -> S } (f_bij : bijective f) :=
+  @UniformFsq_f T S initial initial S1 S2 s1 s2 f f_bij.
 
 
 Lemma bij_same_r { F1 F2 : finType } { w0 : F1 } { w0' : F2 } { f : F1 -> F2 }
@@ -275,10 +281,10 @@ Qed.
 
 
 
-Lemma UniformSQ_f_coupling { i j : Index}
+Lemma UniformSQ_f_coupling { T1 T2 : fin1Type }
                             { S1 S2 : choiceType } { s1 : S1 } { s2 : S2 }
-                            { f : fin_family i -> fin_family j } (f_bij : bijective f):
-  coupling (UniformSQ s1 s2 f_bij) (@Uniform i S1 s1) (@Uniform j S2 s2).
+                            { f : T1 -> T2 } (f_bij : bijective f):
+  coupling (UniformSQ s1 s2 f_bij) (@Uniform T1 S1 s1) (@Uniform T2 S2 s2).
 Proof.
   destruct f_bij as [f_inv Kf1 Kf2].
   rewrite /UniformFsq_f /f_dprod.
@@ -293,10 +299,11 @@ Proof.
       exfalso. rewrite Bool.andb_false_r Bool.andb_false_l in H. by move /eqP : H.  }
     have Hf : (f w1 = w2).
     { destruct (f w1 == w2) eqn:Heq; apply /eqP; rewrite Heq; auto.
+      rewrite Heq in H.
       rewrite Bool.andb_false_r in H. by move /eqP: H. }
       by rewrite Hs Hf.
     move => [w2 st2] /=.
-    destruct ((st1 == s1) && (st2 == s2) && (f w1 == w2)); auto.
+    destruct ((st1 == s1) && (st2 == s2) && (f w1 == w2)) eqn:e; rewrite e; auto.
     exact: r_nonneg.
   - move => [w2 st2].
     rewrite /rmg dsndE /mkdistr psum_sum /=.
@@ -304,7 +311,7 @@ Proof.
     have Hf: (f (f_inv w2) = w2) by apply: (Kf2 w2).
     have Hs: s1 == s1 by apply /eqP.
     rewrite Hf Hs /= refl_true Bool.andb_true_r Uniform_eval.
-    rewrite (@bij_same_r (fin_family i) (fin_family j) (F_w0 i) w2 f).
+    rewrite (@bij_same_r T1 T2 initial w2 f).
     reflexivity.
     by exists f_inv.
     move => [w1 st1] /= Hneq.
@@ -316,7 +323,7 @@ Proof.
       by rewrite Bool.andb_comm Bool.andb_assoc Heq Bool.andb_false_l. }
     subst.
     by rewrite Kf1 refl_true.
-    move => [w1 st1] /=. destruct ((st1 == s1) && (st2 == s2) && (f w1 == w2)); auto.
+    move => [w1 st1] /=. destruct ((st1 == s1) && (st2 == s2) && (f w1 == w2)) eqn:e; rewrite e; auto.
     exact: r_nonneg.
 Qed.
 
@@ -324,10 +331,10 @@ Import RSemanticNotation.
 #[local] Open Scope rsemantic_scope.
 
 
-Theorem Uniform_bij_rule { i j : Index } { S1 S2 : choiceType }
-                          { f : fin_family i -> fin_family j } (f_bij : bijective f)
+Theorem Uniform_bij_rule {T1 T2 : fin1Type} { S1 S2 : choiceType }
+                          { f : T1 -> T2 } (f_bij : bijective f)
                           (P : S1 * S2 -> Prop) :
-  ⊨ ⦃ P ⦄ (@Uniform_F i S1) ≈ (@Uniform_F j S2) ⦃ fun '(w1, s1) '(w2, s2) => P (s1, s2) /\ (f w1 == w2) ⦄.
+  ⊨ ⦃ P ⦄ (@Uniform_F T1 S1) ≈ (@Uniform_F T2 S2) ⦃ fun '(w1, s1) '(w2, s2) => P (s1, s2) /\ (f w1 == w2) ⦄.
 Proof.
   move => [s1 s2] /=.
   move => π /= [H11 H2].
@@ -344,7 +351,7 @@ Proof.
     { destruct (st2 == s2) eqn:Heq; auto.
       by rewrite Bool.andb_false_r Order.POrderTheory.ltxx in H. }
     have hfoo3 : (f w1 == w2).
-    { destruct (f w1 == w2) eqn:Heq; auto.
+    { destruct (f w1 == w2) eqn:Heq; rewrite Heq in H; auto.
       by rewrite Bool.andb_false_r  Order.POrderTheory.ltxx in H. }
     move /eqP : hfoo1. move /eqP : hfoo2. move /eqP : hfoo3.
     move => hfoo3 hfoo2 hfoo1. subst.
@@ -393,18 +400,18 @@ Export RSPNotation.
 
 
 
-Definition Fail { S : choiceType } : FrStP S chUnit.
+Definition Fail { S : choiceType } : FrStP S unit.
 Proof.
   unshelve eapply ropr.
     apply op_iota. econstructor. exact Fail_Unit.
   move=> _ /=. eapply retrFree. easy.
 Defined.
 
-Definition Assert {S : choiceType} (b : bool) : FrStP S chUnit.
+Definition Assert {S : choiceType} (b : bool) : FrStP S unit.
 Proof.
   destruct b.
   - apply retrFree.
-    exact Datatypes.tt.
+    exact tt.
   - exact Fail.
 Defined.
 
@@ -425,7 +432,7 @@ Proof.
   simpl.
   destruct b, b'.
   all: simpl in *.
-  - exists (SDistr_unit _ ((Datatypes.tt, s1), (Datatypes.tt, s2))).
+  - exists (SDistr_unit _ ((tt, s1), (tt, s2))).
     split.
     + unfold coupling.
       split.
@@ -457,7 +464,7 @@ Proof.
 Qed.
 
 Theorem assert_rule_left { S1 S2 : choiceType }  (b : bool) :
-  ⊨ ⦃ fun (_ : S1 * S2) => b = true ⦄ (Assert b) ≈ (retF Datatypes.tt) ⦃ fun _ _ => b = true ⦄.
+  ⊨ ⦃ fun (_ : S1 * S2) => b = true ⦄ (Assert b) ≈ (retF tt) ⦃ fun _ _ => b = true ⦄.
 Proof.
   intros [s1 s2].
   hnf. intros post. hnf in *.
@@ -466,7 +473,7 @@ Proof.
   simpl.
   destruct b.
   all: simpl in *.
-  - exists (SDistr_unit _ ((Datatypes.tt, s1), (Datatypes.tt, s2))).
+  - exists (SDistr_unit _ ((tt, s1), (tt, s2))).
     split.
     + unfold coupling.
       split.
@@ -481,7 +488,7 @@ Proof.
 Qed.
 
 Theorem assert_rule_right { S1 S2 : choiceType }  (b : bool) :
-  ⊨ ⦃ fun (_ : S1 * S2) => b = true ⦄ (retF Datatypes.tt) ≈ (Assert b) ⦃ fun _ _ => b = true ⦄.
+  ⊨ ⦃ fun (_ : S1 * S2) => b = true ⦄ (retF tt) ≈ (Assert b) ⦃ fun _ _ => b = true ⦄.
 Proof.
   intros [s1 s2].
   hnf. intros post. hnf in *.
@@ -490,7 +497,7 @@ Proof.
   simpl.
   destruct b.
   all: simpl in *.
-  - exists (SDistr_unit _ ((Datatypes.tt, s1), (Datatypes.tt, s2))).
+  - exists (SDistr_unit _ ((tt, s1), (tt, s2))).
     split.
     + unfold coupling.
       split.

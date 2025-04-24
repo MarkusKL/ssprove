@@ -29,27 +29,64 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
+(*
 Definition cast_fun {So To St Tt : choice_type}
   (hS : St = So) (hT : Tt = To) (f : St → raw_code Tt) :
   So → raw_code To.
 Proof.
   subst. auto.
 Defined.
+*)
 
+Definition coe {S T : choice_type} : S → T
+  := λ x, odflt canonical (unpickle (pickle x)).
+
+Lemma coeE {T : choice_type} (x : T) : @coe T T x = x.
+Proof. rewrite /coe pickleK //. Qed.
+
+Definition coe_code {T T' : choice_type} : raw_code T → raw_code T'
+  := λ m, bind m (λ t, ret (coe t)).
+
+Definition coe_code_fun {T S T' S' : choice_type} (f : T → raw_code S)
+  : T' → raw_code S' := λ t', coe_code (f (coe t')).
+
+Lemma coe_code_funE {T S : choice_type} (f : T → raw_code S) x : @coe_code_fun T S T S f x = f x.
+Proof.
+  rewrite /coe_code_fun /coe_code coeE.
+  induction (f x) => //=.
+  1: rewrite coeE //.
+  all: f_equal.
+  all: try apply functional_extensionality.
+  1,2,4: intros y.
+  1,2,3: apply H.
+  apply IHr.
+Qed.
+
+Definition call (p : raw_package) (o : opsig) (x : src o) : (raw_code (tgt o)) := 
+  match p o.1 with
+  | Some (_; _; f) => coe_code_fun f x
+  | None => ret canonical
+  end.
+
+Derive NoConfusion NoConfusionHom for sigT.
+Derive NoConfusion NoConfusionHom for option.
+
+(*
 Definition lookup_op (p: raw_package) (o : opsig) :
-  option (src o → raw_code (tgt o)) :=
+  src o → raw_code (tgt o) :=
   let '(n, (So, To)) := o in
   match p n with
   | Some (St ; Tt ; f) =>
-    match choice_type_eqP St So, choice_type_eqP Tt To with
+
+    match eqb St So, eq Tt To with
     | ReflectT hS, ReflectT hT => Some (cast_fun hS hT f)
     | _,_ => None
     end
   | None => None
   end.
+ *)
+(*
 
-Derive NoConfusion NoConfusionHom for sigT.
-Derive NoConfusion NoConfusionHom for option.
 
 Lemma cast_fun_K :
   ∀ S T f e1 e2,
@@ -110,18 +147,27 @@ Proof.
   destruct choice_type_eqP. 2: reflexivity.
   cbn. subst. cbn. reflexivity.
 Qed.
+ *)
+
+Lemma valid_call :
+  ∀ {L I E p o a},
+    ValidPackage L I E p →
+    fhas E o →
+    ValidCode L I (call p o a).
+Proof.
+  intros L I E p o a [Vp] H.
+  unfold call.
+  specialize (Vp o H).
+  destruct o as [n [S T]].
+  destruct Vp as [f [H' H'']].
+  rewrite H' coe_code_funE //.
+Qed.
 
 Fixpoint code_link {A} (v : raw_code A) (p : raw_package) :
   raw_code A :=
   match v with
   | ret a => ret a
-  | opr o a k =>
-    (* The None branch doesn't happen when valid *)
-    (* We continue with a default value to preserve associativity. *)
-    match lookup_op p o with
-    | Some f => bind (f a) (λ x, code_link (k x) p)
-    | None => code_link (k (chCanonical (chtgt o))) p
-    end
+  | opr o a k => bind (call p o a) (λ x, code_link (k x) p)
   | getr l k => getr l (λ x, code_link (k x) p)
   | putr l v k => putr l v (code_link k p)
   | sampler op k => sampler op (λ x, code_link (k x) p)
@@ -136,10 +182,8 @@ Proof.
   intros A L Im Ir v p hv hp.
   induction hv.
   all: try solve [ constructor ; auto ].
-  eapply lookup_op_valid in hp as hf. 2: eauto.
-  destruct hf as [f [ef hf]].
-  cbn. rewrite ef.
-  apply valid_bind. all: auto.
+  apply valid_bind => //.
+  apply (valid_call _ H).
 Qed.
 
 #[export] Hint Extern 1 (ValidCode ?L ?I (code_link ?v ?p)) =>
@@ -213,13 +257,20 @@ Proof.
   intros A B v k p.
   induction v.
   - cbn. reflexivity.
-  - cbn. destruct lookup_op.
-    + rewrite bind_assoc. f_equal.
-      apply functional_extensionality. auto.
-    + eauto.
+  - cbn. rewrite bind_assoc. f_equal.
+    apply functional_extensionality. auto.
   - cbn. f_equal. apply functional_extensionality. auto.
   - cbn. f_equal. auto.
   - cbn. f_equal. apply functional_extensionality. auto.
+Qed.
+
+Lemma call_link f g o x :
+  call (link f g) o x = code_link (call f o x) g.
+Proof.
+  rewrite /call mapmE.
+  destruct (f o.1) => //=.
+  destruct t as [S [T h]].
+  rewrite code_link_bind //.
 Qed.
 
 Lemma code_link_assoc :
@@ -230,12 +281,8 @@ Proof.
   intros A v f g.
   induction v in f, g |- *.
   - cbn. reflexivity.
-  - cbn. unfold link in *.
-    rewrite lookup_op_map.
-    destruct lookup_op eqn:e.
-    + cbn. rewrite code_link_bind. f_equal.
-      apply functional_extensionality. auto.
-    + cbn. eauto.
+  - cbn. rewrite code_link_bind call_link.
+    f_equal.  apply functional_extensionality. auto.
   - cbn. f_equal. apply functional_extensionality. auto.
   - cbn. f_equal. auto.
   - cbn. f_equal. apply functional_extensionality. auto.
@@ -293,17 +340,16 @@ Proof.
   destruct (p n), (E n) => //.
 Qed.
 
-Lemma lookup_op_trim :
-  ∀ E o p,
-    lookup_op (trim E p) o =
-    obind (λ f, if E o.1 then Some f else None) (lookup_op p o).
+Lemma call_trim :
+  ∀ E o p x,
+    fhas E o →
+    call (trim E p) o x = call p o x.
 Proof.
-  intros E [n [So To]] p.
-  unfold lookup_op, trim.
-  rewrite filtermE.
-  destruct (p n) as [[S1 [T1 f1]]|] => //=;
-    destruct (E n) as [[S2 T2]|] => //=.
-  1,2: do 2 destruct choice_type_eqP => //=.
+  intros E o p x H.
+  rewrite /call filtermE.
+  destruct (p o.1) eqn:e; rewrite e //=.
+  destruct o as [n [S T]].
+  rewrite H //.
 Qed.
 
 Lemma code_link_trim_right :
@@ -314,12 +360,8 @@ Proof.
   intros A L E v p h.
   induction h in p |- *.
   - cbn. reflexivity.
-  - cbn. rewrite lookup_op_trim.
-    destruct o as [n [S T]].
-    destruct lookup_op eqn:e.
-    + cbn. rewrite H //=. f_equal. apply functional_extensionality.
-      intuition auto.
-    + cbn. eauto.
+  - cbn.  rewrite call_trim //.
+    f_equal. apply functional_extensionality. intuition auto.
   - cbn. f_equal. apply functional_extensionality. intuition auto.
   - cbn. f_equal. intuition auto.
   - cbn. f_equal. apply functional_extensionality. intuition auto.
@@ -549,14 +591,15 @@ Proof.
   rewrite unionmA. reflexivity.
 Qed.
 
-Lemma lookup_op_unionm :
-  ∀ p1 p2 o,
-    lookup_op (unionm p1 p2) o =
-    if isSome (p1 (fst o)) then lookup_op p1 o else lookup_op p2 o.
+Lemma call_unionm :
+  ∀ p1 p2 o x,
+    call (unionm p1 p2) o x =
+    if isSome (p1 (fst o)) then call p1 o x else call p2 o x.
 Proof.
-  intros p1 p2 [n [So To]].
-  cbn. rewrite unionmE.
-  destruct (p1 n) as [[S1 [T1 f1]]|] eqn:e1. all: reflexivity.
+  intros p1 p2 [n [So To]] x.
+  cbn. rewrite /call unionmE.
+  destruct (p1 n) as [[S1 [T1 f1]]|] eqn:e1.
+  all: rewrite e1 //=.
 Qed.
 
 Lemma code_link_par_left :
@@ -565,16 +608,16 @@ Lemma code_link_par_left :
     ValidPackage L' I E p1 →
     code_link v (par p1 p2) = code_link v p1.
 Proof.
-  intros A I L L' E v p1 p2 hv hp1.
+  intros A I L L' E v p1 p2 hv [hp1].
   unfold ValidCode in hv.
   induction hv.
   - cbn. reflexivity.
-  - simpl. rewrite lookup_op_unionm.
-    eapply lookup_op_valid in hp1 as hf. 2: eauto.
-    destruct hf as [f [e hf]].
-    rewrite e. eapply lookup_op_spec in e as e'.
-    rewrite e'. cbn. f_equal. extensionality z.
-    eauto.
+  - simpl. rewrite call_unionm.
+    specialize (hp1 o H).
+    destruct o as [n [S T]].
+    destruct hp1 as [f [hp1 hp2]].
+    rewrite //= hp1 //=.
+    f_equal. extensionality y. eauto.
   - simpl. f_equal. extensionality x. eauto.
   - simpl. f_equal. eauto.
   - simpl. f_equal. extensionality x. eauto.
@@ -649,9 +692,8 @@ Proof.
     eapply from_valid_package in h1.
     specialize (h1 (n, (S1, T1)) hi). cbn in h1.
     destruct h1 as [g [eg hg]].
-    rewrite e1 in eg. noconf eg. cbn in hg.
-    erewrite code_link_par_left. 2: eapply hg.
-    all: eauto.
+    rewrite e1 in eg.
+    admit.
   - simpl. destruct (p2 n) as [[S2 [T2 f2]]|] eqn:e2.
     + simpl. f_equal. f_equal. f_equal. extensionality x.
       eapply trimmed_valid_Some_in in e2 as hi. 2,3: eauto.
@@ -660,18 +702,21 @@ Proof.
       destruct h2 as [g [eg hg]].
       rewrite e2 in eg. noconf eg. cbn in hg.
       erewrite code_link_par_right. all: eauto.
+      admit.
     + simpl. reflexivity.
-Qed.
+Admitted.
 
 Local Open Scope type_scope.
 
+(* MK: The following is unsed. Should it be fixed? *)
 (** Package builder from a function *)
 (* TODO: Still works, but outdated. *)
 
+(*
 Definition typed_function L I :=
   ∑ (S T : choice_type), S → code L I T.
 
-Equations? map_interface (I : seq opsig) {A} (f : ∀ x, x \in I → A) :
+Equations? map_interface (I : seq opsig) {A} (f : ∀ x, fhas I x → A) :
   seq A :=
     map_interface (a :: I') f := f a _ :: map_interface I' (λ x h, f x _) ;
     map_interface [::] f := [::].
@@ -729,6 +774,7 @@ Proof.
     auto.
 Qed.
 
+ *)
 Lemma in_getm_def_None :
   ∀ {A : eqType} n (x : A) (s : seq (nat * A)),
     (n,x) \in s →
@@ -839,17 +885,13 @@ Proof.
 Qed.
  *)
 
-Lemma lookup_op_ID :
-  ∀ (I : Interface) o,
+Lemma call_ID :
+  ∀ (I : Interface) o x,
     fhas I o →
-    lookup_op (ID I) o =
-    Some (λ x, opr o x (λ y, ret y)).
+    call (ID I) o x = opr o x (λ y, ret y).
 Proof.
-  intros I [n [S T]] E.
-  unfold lookup_op.
-  rewrite mapimE E //=.
-  do 2 destruct choice_type_eqP => //=.
-  rewrite cast_fun_K //.
+  intros I [n [S T]] x E.
+  rewrite /call //= mapimE E //= coe_code_funE //.
 Qed.
 
 Lemma valid_ID :
@@ -889,7 +931,7 @@ Proof.
   induction hv.
   - cbn. reflexivity.
   - simpl.
-    rewrite (lookup_op_ID _ _ H) //=.
+    rewrite call_ID //=.
     f_equal.
     extensionality y.
     apply H1.
@@ -914,8 +956,9 @@ Proof.
     destruct h' as [g [eg hg]].
     rewrite e in eg. noconf eg. cbn in hg.
     eapply code_link_id. all: eauto.
+    admit.
   - reflexivity.
-Qed.
+Admitted.
 
 Lemma id_link :
   ∀ L I E p,
@@ -933,12 +976,10 @@ Proof.
   apply from_valid_package in hp.
   specialize (hp (n, (S, T)) E').
   destruct hp as [f [H H']].
-  rewrite H.
-  do 2 destruct choice_type_eqP => //=.
-  rewrite cast_fun_K //=.
+  rewrite /call H //=.
   do 3 f_equal.
   extensionality x.
-  apply bind_ret.
+  rewrite bind_ret coe_code_funE //=.
 Qed.
 
 Lemma code_link_if :

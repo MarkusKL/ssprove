@@ -47,43 +47,8 @@ Set Primitive Projections.
 
 (** Uniform distributions  *)
 
-Definition uniform (i : nat) `{Positive i} : Op :=
-  existT _ ('fin i) (Uni_W (mkpos i)).
-
-(** Some bijections
-
-  These are useful when working with uniform distributions that can only
-  land in 'fin n.
-
-  TODO: Move? In Prelude?
-
-*)
-
-Definition fto {F : finType} : F → 'I_#|F|.
-Proof.
-  intro x. eapply enum_rank. auto.
-Defined.
-
-Definition otf {F : finType} : 'I_#|F| → F.
-Proof.
-  intro x. eapply enum_val. exact x.
-Defined.
-
-Lemma fto_otf :
-  ∀ {F} x, fto (F := F) (otf x) = x.
-Proof.
-  intros F x.
-  unfold fto, otf.
-  apply enum_valK.
-Qed.
-
-Lemma otf_fto :
-  ∀ {F} x, otf (F := F) (fto x) = x.
-Proof.
-  intros F x.
-  unfold fto, otf.
-  apply enum_rankK.
-Qed.
+Definition uniform (F : fin1Type) : Op :=
+  existT _ (F : count1Type) Uni_W.
 
 Lemma card_prod_iprod :
   ∀ i j,
@@ -93,6 +58,7 @@ Proof.
   rewrite card_prod. simpl. rewrite !card_ord. reflexivity.
 Qed.
 
+(*
 Definition ch2prod {i j} `{Positive i} `{Positive j}
   (x : Arit (uniform (i * j))) :
   (Arit (uniform i)) * (Arit (uniform j)).
@@ -132,27 +98,26 @@ Proof.
   rewrite fto_otf.
   rewrite rew_opp_r. reflexivity.
 Qed.
+ *)
 
 Lemma repr_Uniform :
-  ∀ i `{Positive i},
-    repr (x ← sample uniform i ;; ret x) = @Uniform_F (mkpos i) _.
-Proof.
-  intros i hi. reflexivity.
-Qed.
+  ∀ {F : fin1Type},
+    repr (x ← sample uniform F ;; ret x) = @Uniform_F F _.
+Proof. by intros F. Qed.
 
 Lemma repr_cmd_Uniform :
-  ∀ i `{Positive i},
-    repr_cmd (cmd_sample (uniform i)) = @Uniform_F (mkpos i) _.
-Proof.
-  intros i hi. reflexivity.
-Qed.
+  ∀ {F : fin1Type},
+    repr_cmd (cmd_sample (uniform F)) = @Uniform_F F _.
+Proof. by intros F. Qed.
 
+(*
 Lemma ordinal_finType_inhabited :
   ∀ i `{Positive i}, (ordinal i :finType).
 Proof.
   intros i hi.
   exists 0%N. auto.
 Qed.
+ *)
 
 (** Fail and Assert *)
 
@@ -220,22 +185,24 @@ Notation "'#assert' b ;; k" :=
 Class LosslessOp (op : Op) :=
   is_lossless_op : psum op.π2 = 1.
 
-#[export] Instance LosslessOp_uniform i `{Positive i} : LosslessOp (uniform i).
+#[export] Instance LosslessOp_uniform {F : fin1Type} : LosslessOp (uniform F).
 Proof.
   unfold LosslessOp.
   simpl.
   unfold r. rewrite psumZ. 2: apply ler0n.
   simpl. rewrite GRing.mul1r.
-  rewrite psum_fin. rewrite cardE. rewrite size_enum_ord. simpl.
-  rewrite GRing.sumr_const. rewrite cardE. rewrite size_enum_ord.
+  rewrite psum_fin.
+  rewrite GRing.sumr_const.
   rewrite -normrMn.
   rewrite -GRing.Theory.mulr_natr.
   rewrite GRing.mulVf.
+
   2:{
     apply /negP => e.
     rewrite intr_eq0 in e.
     move: e => /eqP e.
-    destruct i. all: discriminate.
+    injection e => {}e.
+    apply (fintype0 initial e).
   }
   rewrite normr1. reflexivity.
 Qed.

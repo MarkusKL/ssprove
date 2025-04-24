@@ -119,6 +119,7 @@ Ltac invert_interface_in h :=
   invert_in_seq h' ;
   [ noconf h' .. ].
 
+(*
 Ltac lookup_op_squeeze :=
   let f := fresh "f" in
   let e := fresh "e" in
@@ -163,6 +164,7 @@ Ltac simplify_eq_rel m :=
   unfold get_op_default ;
   repeat lookup_op_squeeze ;
   simpl.
+ *)
 
 Create HintDb ssprove_code_simpl.
 
@@ -269,7 +271,7 @@ Ltac ssprove_match_commut_gen1 :=
   end.
 
 Ltac ssprove_match_commut_gen :=
-  repeat (ssprove_match_commut_gen1 ; simplify_linking).
+  repeat (ssprove_match_commut_gen1 (*; simplify_linking*)).
 
 Ltac ssprove_code_simpl :=
   lazymatch goal with
@@ -603,7 +605,7 @@ Ltac ssprove_code_simpl_more_aux :=
   lazymatch goal with
   | |- ⊢ ⦃ _ ⦄ _ ≈ ?c ⦃ _ ⦄ =>
     lazymatch c with
-    | @bind _ (chElement ?B) (@assertD ?A ?b ?k1) ?k2 =>
+    | @bind _ (?B) (@assertD ?A ?b ?k1) ?k2 =>
       eapply r_transR ; [
         (* How do I recover the other choice_type otherwise? *)
         eapply (r_bind_assertD_sym A B b k1 k2)
@@ -762,6 +764,7 @@ Ltac ssprove_restore_mem :=
   | idtac
   ].
 
+(*
 Ltac lookup_hpv_l_eq_solve :=
   repeat (
     tryif rewrite lookup_hpv_l_eq
@@ -823,6 +826,7 @@ Ltac lookup_hpv_r_eq_solve :=
     ] ..
   ]
   : ssprove_invariant.
+ *)
 
 Ltac get_heap_simpl :=
   repeat
