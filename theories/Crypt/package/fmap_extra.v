@@ -34,7 +34,7 @@ Section Defs.
 
 End Defs.
 
-Context {K : choiceType} {K' : choiceType} {V : Type}.
+Context {K : choiceType} {K' : choiceType} {V V' V'' : Type}.
 
 Lemma submapf_hasf (m m' : {fmap K → V}) k v
   : submapf m m' → hasf m k v → hasf m' k v.
@@ -111,10 +111,25 @@ Proof.
   intros H.
   rewrite /hasf setfC in H.
   destruct (k' == k) eqn:E.
+  - left.
+    rewrite -fmapP in H.
+    specialize (H k).
+    move: E => /eqP E; subst.
+    rewrite 2!fnd_set eq_refl in H.
+    by noconf H.
+  - right.
+    (*
+    rewrite /hasf -2!fmapP in H |- *.
+    specialize (H k
+    unfold hasf.
+    rewrite -setf_rem1 -(setf_rem1 m k) in H.
+    apply setf_inj in H.
+    Search setf.
+    Search "inj" setf.
+     *)
   (*
   rewrite /hasf setfC in H.
   - left.
-    move: E => /eqP -> {t'}.
     by noconf H.
   - by right.
 Qed.
@@ -240,67 +255,64 @@ Qed.
 Hint Resolve sub0mapf subUmapf submapf_set : fmap_solve_db.
 
 
-
-Lemma fseparateUl {T : ordType} {S S' : Type}
-  (m m' : {fmap T → S}) (m'' : {fmap T → S'})
-  : fseparate m m'' → fseparate m' m'' → fseparate (unionm m m') m''.
+Lemma separatefUl (m m' : {fmap K → V}) (m'' : {fmap K → V'})
+  : separatef m m'' → separatef m' m'' → separatef (m + m') m''.
 Proof.
   intros [H] [H'].
   apply fsep.
-  rewrite domm_union fdisjointUl H H' //.
+  rewrite domf_cat fdisjointUX H H' //.
 Qed.
 
-Lemma fseparateUr {T : ordType} {S S'}
-  (m : {fmap T → S}) (m' m'' : {fmap T → S'})
-  : fseparate m m' → fseparate m m'' → fseparate m (unionm m' m'').
+Lemma separatefUr (m : {fmap K → V}) (m' m'' : {fmap K → V'})
+  : separatef m m' → separatef m m'' → separatef m (m' + m'').
 Proof.
   intros [H] [H'].
   apply fsep.
-  rewrite domm_union fdisjointUr H H' //.
+  rewrite domf_cat fdisjointXU H H' //.
 Qed.
 
-Lemma fseparate_set {T : ordType} {S S'} (k k' : T) (v v' : S)
-  (m : {fmap T → S}) (m' : {fmap T → S'})
-  : fseparate (setm emptym k v) m'
-  → fseparate (setm m k' v') m'
-  → fseparate (setm (setm m k' v') k v) m'.
+Lemma separatef_set_set (k k' : K) (v v' : V)
+  (m : {fmap K → V}) (m' : {fmap K → V'})
+  : separatef [fmap].[k <- v] m'
+  → separatef m.[k' <- v'] m'
+  → separatef m.[k' <- v'].[k <- v] m'.
 Proof.
   intros [H] [H'].
   apply fsep.
-  rewrite domm_set domm0 fsetU0 in H.
-  rewrite domm_set fdisjointUl H' H //.
+  rewrite dom_setf fdisjointUX H'.
+  rewrite dom_setf domf0 fsetU0 in H.
+  rewrite H //.
 Qed.
 
-Lemma fseparate_set1 {T : ordType} {S S'} (k k' : T)
-  (v : S) (v' : S') (m' : {fmap T → S'})
+Lemma separatef_set (k k' : K) (v : V) (v' : V') (m' : {fmap K → V'})
   : k ≠ k'
-  → fseparate (setm emptym k v) m'
-  → fseparate (setm emptym k v) (setm m' k' v').
+  → separatef [fmap].[k <- v] m'
+  → separatef [fmap].[k <- v] m'.[k' <- v'].
 Proof.
   intros H [H'].
   apply fsep.
-  rewrite domm_set domm0 fsetU0 in H'.
-  rewrite 2!domm_set domm0 fsetU0 fdisjointUr H'.
-  apply /andP; split => //.
-  apply /fdisjointP => x /fset1P -> {x}.
-  apply /negP => /fset1P //.
+  rewrite dom_setf domf0 fsetU0 in H'.
+  rewrite 2!dom_setf domf0 fsetU0 fdisjointXU H'.
+  rewrite fdisjoint1X in_fset1.
+  move: H => /eqP -> //.
 Qed.
 
-Lemma fseparate0m {T : ordType} {S S'} (m : {fmap T → S'})
-  : fseparate (@emptym T S) m.
-Proof. apply fsep. rewrite domm0 fdisjoint0s //. Qed.
+Lemma fseparate0m (m : {fmap K → V'})
+  : @separatef K V V' [fmap] m.
+Proof. apply fsep. rewrite domf0 fdisjoint0X //. Qed.
 
-Lemma fseparatem0 {T : ordType} {S S'} (m : {fmap T → S})
-  : fseparate m (@emptym T S').
-Proof. apply fsep. rewrite domm0 fdisjoints0 //. Qed.
+Lemma fseparatem0 (m : {fmap K → V})
+  : @separatef K V V' m [fmap].
+Proof. apply fsep. rewrite domf0 fdisjointX0 //. Qed.
 
-Lemma fseparateE {T : ordType} {S S'} (m : {fmap T → S}) (m' : {fmap T → S'})
-  : fseparate m m' → domm m :#: domm m'.
+Lemma fseparateE (m : {fmap K → V}) (m' : {fmap K → V'})
+  : separatef m m' → [disjoint domf m & domf m'].
 Proof. by intros [?]. Qed.
 
-Lemma fseparateMl {T : ordType} {S S' S'' : Type}
-  (f : S → S') (m : {fmap T → S}) (m' : {fmap T → S''})
-  : fseparate m m' → fseparate (mapm f m) m'.
+
+Lemma fseparateMl
+  (f : V → V') (m : {fmap K → V}) (m' : {fmap K → V''})
+  : separatef m m' → separatef (mapm m f) m'.
 Proof. intros [H]. apply fsep. rewrite domm_map //. Qed.
 
 Lemma fseparateMil {T : ordType} {S S' S'' : Type}
