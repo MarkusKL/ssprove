@@ -1,181 +1,154 @@
 From Coq Require Import Utf8.
 
-From mathcomp Require Import ssreflect eqtype choice seq ssrfun ssrbool.
+From mathcomp Require Import all_ssreflect ssreflect eqtype choice seq ssrfun ssrbool finmap.
 
 From Equations Require Import Equations.
 Require Equations.Prop.DepElim.
 Set Equations With UIP.
 
-From extructures Require Import ord fset fmap.
-
 #[local] Open Scope fset.
+#[local] Open Scope fmap.
 
 Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-(* Note that fsubmap is defined into Prop unlike other extructures operators.
-   A bool definition would require S to be an eqType, which would make it
-   hard to have maps into e.g. Type or choiceType. *)
-Definition fsubmap {T : ordType} {S} (m m' : {fmap T → S}) : Prop
-  := unionm m m' = m'.
+Section Defs.
+  Context {K : choiceType} {V V' : Type}.
+  (* Note that submapf is defined into Prop unlike other extructures operators.
+     A bool definition would require S to be an eqType, which would make it
+     hard to have maps into e.g. Type or choiceType. *)
+  Definition submapf (m m' : {fmap K → V}) : Prop
+    := m' + m = m'. (* alt: m'.[& domf m ] = m. *)
 
-Definition fhas {T : ordType} {S} (m : {fmap T → S}) kv
-  := let '(k, v) := kv in (m k = Some v).
+  Definition hasf (m : {fmap K → V}) k v
+    := m.[k <- v] = m. (* alt: m.[? k] = Some v *)
 
-Lemma fhas_fsubmap {T : ordType} {S} (m m' : {fmap T → S})
-  : (∀ kv, fhas m kv → fhas m' kv) ↔ fsubmap m m'.
+  (* implied by disjointness *)
+  Definition compatf (m m' : {fmap K → V}) :=
+    m + m' = m' + m.  (* alt: m.[& domf m'] = m'.[& domf m]. *)
+
+  Inductive separatef
+    (m : {fmap K → V}) (m' : {fmap K → V'}) :=
+    | fsep : [disjoint domf m & domf m'] → separatef m m'.
+
+End Defs.
+
+Context {K : choiceType} {K' : choiceType} {V : Type}.
+
+Lemma submapf_hasf (m m' : {fmap K → V}) k v
+  : submapf m m' → hasf m k v → hasf m' k v.
+Proof. intros H H'. rewrite /hasf -H -catf_setr H' //. Qed.
+
+Lemma catfI (m : {fmap K → V}) : m + m = m.
 Proof.
-  split.
-  - intros H.
-    apply eq_fmap => t.
-    rewrite unionmE.
-    destruct (m t) eqn:E => //.
-    specialize (H (t, s) E).
-    rewrite H //.
-  - intros H [t s] H'.
-    rewrite -H //=.
-    rewrite unionmE H' //=.
+  apply fmapP => k.
+  rewrite fnd_cat.
+  by elim: (k \in domf m).
 Qed.
 
-Lemma fsubmap_fhas {T : ordType} {S} (m m' : {fmap T → S}) kv
-  : fsubmap m m' → fhas m kv → fhas m' kv.
-Proof. rewrite -fhas_fsubmap. auto. Qed.
+Lemma submapfUl (m m' : {fmap K → V}) : compatf m m' → submapf m (m + m').
+Proof. intros H. rewrite /submapf -catfA -H catfA catfI //. Qed.
 
+Lemma submapfUr (m m' : {fmap K → V}) : submapf m' (m + m').
+Proof. rewrite /submapf -catfA catfI //. Qed.
 
-Definition fcompat {T : ordType} {S} (m m' : {fmap T → S}) :=
-  unionm m m' = unionm m' m.
-
-Lemma fsubmapUl {T : ordType} {S} (m m' : {fmap T → S}) :
-  fsubmap m (unionm m m').
-Proof.
-  apply eq_fmap => t.
-  rewrite 2!unionmE.
-  destruct (m t), (m' t) => //.
-Qed.
-
-Lemma fsubmapUr {T : ordType} {S} (m m' : {fmap T → S}) :
-  fcompat m m' → fsubmap m' (unionm m m').
-Proof.
-  move=> ->.
-  apply eq_fmap => t.
-  rewrite 2!unionmE.
-  destruct (m t), (m' t) => //.
-Qed.
-
-Lemma fsubmap_trans {T : ordType} {S} (m m' m'' : {fmap T → S}) :
-  fsubmap m m' → fsubmap m' m'' → fsubmap m m''.
+Lemma submapf_trans (m m' m'' : {fmap K → V}) :
+  submapf m m' → submapf m' m'' → submapf m m''.
 Proof.
   intros H H'.
-  apply eq_fmap => t.
-  rewrite -{2}H' -H -unionmA H' //.
+  apply fmapP => k.
+  rewrite -H' -H -2!catfA catfI //.
 Qed.
 
-Lemma fsubmapUl_trans {T : ordType} {S} (m m' m'' : {fmap T → S}) :
-  fsubmap m m' → fsubmap m (unionm m' m'').
+Lemma submapfUl_trans (m m' m'' : {fmap K → V}) :
+  compatf m' m'' → submapf m m' → submapf m (m' + m'').
 Proof.
-  intros H. eapply fsubmap_trans;
-  [ apply H | apply fsubmapUl ].
+  intros H H'. eapply submapf_trans;
+  [ apply H' | apply submapfUl, H ].
 Qed.
 
-Lemma fsubmapUr_trans {T : ordType} {S} (m m' m'' : {fmap T → S}) :
-  fcompat m' m'' → fsubmap m m'' → fsubmap m (unionm m' m'').
+Lemma submapfUr_trans (m m' m'' : {fmap K → V}) :
+  submapf m m'' → submapf m (m' + m'').
 Proof.
-  intros H H'. eapply fsubmap_trans;
-  [ apply H' | apply fsubmapUr, H ].
+  intros H. eapply submapf_trans;
+  [ apply H | apply submapfUr ].
 Qed.
 
-Lemma fsubUmap {T : ordType} {S} (m m' m'' : {fmap T → S}) :
-  fsubmap m m'' → fsubmap m' m'' → fsubmap (unionm m m') m''.
+Lemma subUmapf (m m' m'' : {fmap K → V}) :
+  submapf m m'' → submapf m' m'' → submapf (m + m') m''.
+Proof. intros H H'. rewrite /submapf catfA H H' //. Qed.
+
+Lemma sub0mapf (m : {fmap K → V}) : submapf fmap0 m.
+Proof. rewrite /submapf catf0 //. Qed.
+
+Lemma hasf0 (k : K) (v : V) : ¬ hasf fmap0 k v.
 Proof.
-  intros H H'.
-  rewrite /fsubmap -unionmA H' H //.
+  rewrite /hasf -fmapP.
+  intros H.
+  specialize (H k).
+  rewrite fnd_fmap0 fnd_set eq_refl // in H.
 Qed.
 
-Lemma fsub0map {T : ordType} {S} (m : {fmap T → S}) : fsubmap emptym m.
-Proof. rewrite /fsubmap union0m //. Qed.
+Lemma hasf_set (m : {fmap K → V}) k v :
+  hasf (m.[k <- v]) k v.
+Proof. rewrite /hasf setfC eq_refl //. Qed.
 
-Lemma fsubmap_fcompat {T : ordType} {S} (m m' m'' : {fmap T → S}) :
-  fsubmap m' m → fsubmap m'' m → fcompat m' m''.
-Proof.
-  intros H H'.
-  apply eq_fmap in H, H'.
-  apply eq_fmap => t.
-  specialize (H t).
-  rewrite unionmE in H.
-  specialize (H' t).
-  rewrite unionmE in H'.
-  rewrite 2!unionmE.
-  destruct (m' t), (m'' t) => //.
-  rewrite H H' //.
-Qed.
-
-Lemma fhas_in {T : ordType} {S} (m : {fmap T → S}) ts
-  : fhas m ts → ts.1 \in domm m.
-Proof.
-  move: ts => [t s] H.
-  apply /dommP.
-  by exists s.
-Qed.
-
-Lemma fhas_empty {T : ordType} {S} k : ¬ fhas (@emptym T S) k.
-Proof. by destruct k. Qed.
-
-Lemma fhas_set {T : ordType} {S} k v (m : {fmap T → S}) :
-  fhas (setm m k v) (k, v).
-Proof. rewrite //= setmE eq_refl //. Qed.
-
-Lemma fhas_set_next {T : ordType} {S} (m : {fmap T → S}) k k' v v' :
-  k ≠ k' → fhas m (k, v) → fhas (setm m k' v') (k, v).
+Lemma hasf_set_next (m : {fmap K → V}) k k' v v' :
+  k ≠ k' → hasf m k v → hasf (m.[k' <- v']) k v.
 Proof.
   move=> /eqP H H'.
-  rewrite //= setmE.
+  rewrite /hasf setfC H'.
   destruct (k == k') => //.
 Qed.
 
-Lemma fsubmapxx {T : ordType} {S} (m : {fmap T → S}) : fsubmap m m.
-Proof. rewrite /fsubmap unionmI //. Qed.
+Lemma submapfxx (m : {fmap K → V}) : submapf m m.
+Proof. rewrite /submapf catfI //. Qed.
 
-Lemma fhas_cons {T : ordType} {S} x' x (xs : seq (T * S)) :
-  fhas (mkfmap (x :: xs)) x' → x = x' ∨ fhas (mkfmap xs) x'.
+Lemma hasf_set_case (m : {fmap K → V}) k v k' v' :
+  hasf m.[k <- v] k' v' → v = v' ∨ hasf m k' v'.
 Proof.
-  move: x x' => [t s] [t' s'] H.
-  rewrite /fhas //= setmE in H.
-  destruct (t' == t) eqn:E.
+  intros H.
+  rewrite /hasf setfC in H.
+  destruct (k' == k) eqn:E.
+  (*
+  rewrite /hasf setfC in H.
   - left.
     move: E => /eqP -> {t'}.
     by noconf H.
   - by right.
 Qed.
+   *)
+Admitted.
 
 (* Tactics *)
 
 Ltac fmap_invert H :=
-  (by apply fhas_empty in H) ||
+  (by apply hasf0 in H) ||
   ( let x := fresh "x" in
-    apply fhas_cons in H ;
+    apply hasf_set_case in H ;
     destruct H as [x|H]; [ noconf x | fmap_invert H ]
   ).
 
 Create HintDb fmap_solve_db.
 
-#[export] Hint Extern 2 (fhas ?m ?k) =>
-  apply fhas_set
+#[export] Hint Extern 2 (hasf ?m ?k) =>
+  apply hasf_set
   : fmap_solve_db.
 
-#[export] Hint Extern 3 (fhas ?m ?k) =>
-  apply fhas_set_next; [ done |]
+#[export] Hint Extern 3 (hasf ?m ?k) =>
+  apply hasf_set_next; [ done |]
   : fmap_solve_db.
 
-#[export] Hint Resolve fsubmapUl_trans fsubmapUr_trans
+#[export] Hint Resolve submapfUl_trans submapfUr_trans
   : fmap_solve_db.
 
-#[export] Hint Extern 1 (fcompat ?m ?m') =>
+#[export] Hint Extern 1 (compatf ?m ?m') =>
   reflexivity
   : fmap_solve_db.
 
-Hint Extern 1 (fsubmap ?m ?m') =>
-  apply fsubmapxx
+Hint Extern 1 (submapf ?m ?m') =>
+  apply submapfxx
   : fmap_solve_db.
   
 
@@ -183,96 +156,90 @@ Ltac fmap_solve :=
   typeclasses eauto with fmap_solve_db.
 
 
-Definition fcompat11 {T : ordType} {S} (x x' : T * S)
-  := x.1 ≠ x'.1 ∨ x.2 = x'.2.
+Definition compatf11 (k : K) (v : V) k' v'
+  := k ≠ k' ∨ v = v'.
 
-Lemma fcompat0m {T : ordType} {S} (m : {fmap T → S})
-  : fcompat emptym m.
-Proof. rewrite /fcompat unionm0 //. Qed.
+Lemma compatf0m (m : {fmap K → V})
+  : compatf fmap0 m.
+Proof. rewrite /compatf catf0 cat0f //. Qed.
 
-Lemma fcompatm0 {T : ordType} {S} (m : {fmap T → S})
-  : fcompat m emptym.
-Proof. rewrite /fcompat unionm0 //. Qed.
+Lemma compatfm0 (m : {fmap K → V})
+  : compatf m fmap0.
+Proof. rewrite /compatf catf0 cat0f //. Qed.
 
-Lemma fcompat11_swap {T : ordType} {S} (x y : T * S) m
-  : fcompat11 x y
-  → setm (setm m y.1 y.2) x.1 x.2 = setm (setm m x.1 x.2) y.1 y.2.
+Lemma compatf11_swap (k : K) (v : V) k' v' m
+  : compatf11 k v k' v'
+  → m.[k' <- v'].[k <- v] = m.[k <- v].[k' <- v'].
 Proof.
   intros [H|H].
-  - rewrite setmC //.
-    rewrite eq_sym; by apply /eqP.
-  - destruct (y.1 == x.1) eqn:E.
+  - rewrite setfC.
+    move: H => /eqP /negPf -> //.
+  - destruct (k == k') eqn:E.
     + move: E H => /eqP.
-      destruct x, y => //= H H'.
-      subst. rewrite setmI // setmE eq_refl //.
-    + rewrite setmC // E //.
+      intros ? ?. by subst.
+    + rewrite setfC E //.
 Qed.
 
-Lemma fcompat_cons1 {T : ordType} {S} (x : T * S) y ys
-  : fcompat11 x y
-  → fcompat [fmap x] (mkfmap ys)
-  → fcompat [fmap x] (mkfmap (y :: ys)).
+Lemma compatf_set (k : K) (v : V) k' v' m
+  : compatf11 k v k' v'
+  → compatf [fmap].[k <- v] m
+  → compatf [fmap].[k <- v] m.[k' <- v'].
 Proof.
   intros H H'.
-  rewrite /fcompat //= -setm_union union0m.
-  rewrite -setm_union -H'.
-  rewrite (fcompat11_swap _ _ _ H) //.
+  rewrite /compatf 2!catf_setr H' catf_setr 2!catf0.
+  rewrite -compatf11_swap //.
 Qed.
 
-Lemma fcompat_cons {T : ordType} {S} (x x' : T * S) xs ys
-  : fcompat [fmap x] (mkfmap ys)
-  → fcompat (mkfmap (x' :: xs)) (mkfmap ys)
-  → fcompat (mkfmap (x :: x' :: xs)) (mkfmap ys).
+Lemma compatf_set_set k v k' v' (m m' : {fmap K → V})
+  : compatf [fmap].[k <- v] m'
+  → compatf m.[k' <- v'] m'
+  → compatf m.[k' <- v'].[k <- v] m'.
 Proof.
   intros H H'.
-  rewrite /fcompat //= -setm_union H'.
-  rewrite /fcompat -setm_union union0m in H.
-  rewrite setm_union H -unionmA //.
+  rewrite /compatf catf_setr -H' -catf_setr.
+  rewrite -{2}(catf0 m') -catf_setr -H.
+  rewrite catfA catf_setr catf0 //.
 Qed.
 
-Hint Extern 1 (fcompat11 ?m ?m') =>
+Hint Extern 1 (compatf11 ?m ?m') =>
   (by left) || (by right)
   : fmap_solve_db.
 
-Hint Resolve fcompat_cons1 fcompat_cons fcompatm0 fcompat0m : fmap_solve_db.
+Hint Resolve compatf_set compatf_set_set compatfm0 compatf0m : fmap_solve_db.
 
-Lemma union_fcompat {T : ordType} {S} (m m' m'' : {fmap T →  S})
-  : fcompat m m''
-  → fcompat m' m''
-  → fcompat (unionm m m') m''.
+Lemma catf_compat (m m' m'' : {fmap K → V})
+  : compatf m m''
+  → compatf m' m''
+  → compatf (m + m') m''.
 Proof.
   intros H H'.
-  rewrite /fcompat unionmA -H -unionmA H' unionmA //.
+  rewrite /compatf catfA -H -catfA H' catfA //.
 Qed.
 
-Lemma fcompat_union {T : ordType} {S} (m m' m'' : {fmap T →  S})
-  : fcompat m m'
-  → fcompat m m''
-  → fcompat m (unionm m' m'').
+Lemma compatf_cat (m m' m'' : {fmap K → V})
+  : compatf m m'
+  → compatf m m''
+  → compatf m (m' + m'').
 Proof.
   intros H H'.
-  rewrite /fcompat unionmA H -unionmA H' unionmA //.
+  rewrite /compatf catfA H -catfA H' catfA //.
 Qed.
 
-Hint Resolve union_fcompat fcompat_union : fmap_solve_db.
+Hint Resolve catf_compat compatf_cat : fmap_solve_db.
 
 
-Lemma fsubmap_set {T : ordType} {S} (k : T) (v : S) m m'
-  : fhas m' (k, v)
-  → fsubmap m m'
-  → fsubmap (setm m k v) m'.
+Lemma submapf_set (k : K) (v : V) m m'
+  : hasf m' k v
+  → submapf m m'
+  → submapf m.[k <- v] m'.
 Proof.
   intros H H'.
-  rewrite /fsubmap -setm_union H' setmI //.
+  rewrite /submapf catf_setr H' H //.
 Qed.
 
-Hint Resolve fsub0map fsubUmap fsubmap_set : fmap_solve_db.
+Hint Resolve sub0mapf subUmapf submapf_set : fmap_solve_db.
 
 
-
-Inductive fseparate {T : ordType} {S S' : Type}
-  (m : {fmap T → S}) (m' : {fmap T → S'}) :=
-  | fsep : domm m :#: domm m' → fseparate m m'.
 
 Lemma fseparateUl {T : ordType} {S S' : Type}
   (m m' : {fmap T → S}) (m'' : {fmap T → S'})

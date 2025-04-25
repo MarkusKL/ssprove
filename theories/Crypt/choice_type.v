@@ -17,16 +17,14 @@ From deriving Require Import deriving.
 
 Set Warnings "-ambiguous-paths,-notation-overridden,-notation-incompatible-format".
 From mathcomp Require Import ssrnat ssreflect ssrfun ssrbool ssrnum eqtype
-  choice reals distr realsum seq all_algebra fintype.
+  choice reals distr realsum seq all_algebra fintype all_ssreflect all_algebra finmap.
 From mathcomp Require Import word_ssrZ word.
 (* From Jasmin Require Import utils word. *)
-From SSProve.Crypt Require Import jasmin_word jasmin_util.
 Set Warnings "ambiguous-paths,notation-overridden,notation-incompatible-format".
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra.
 
+From SSProve.Crypt Require Import jasmin_word jasmin_util.
 From SSProve.Crypt Require Import Prelude Axioms Casts.
-From extructures Require Import ord fset fmap.
 From SSProve.Mon Require Import SPropBase.
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -39,7 +37,6 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Open Scope fset.
 Open Scope fset_scope.
 Open Scope type_scope.
 
@@ -58,21 +55,6 @@ Inductive choice_type :=
 
 Derive NoConfusion NoConfusionHom for choice_type.
 
-Fixpoint chElement_ordType (U : choice_type) : ordType :=
-  match U with
-  | chUnit => unit_ordType
-  | chNat => nat_ordType
-  | chInt => int_ordType
-  | chBool => bool_ordType
-  | chProd U1 U2 => prod_ordType (chElement_ordType U1) (chElement_ordType U2)
-  | chMap U1 U2 => fmap_ordType (chElement_ordType U1) (chElement_ordType U2)
-  | chOption U => option_ordType (chElement_ordType U)
-  | chFin n => fin_ordType n
-  | chWord nbits => word_ordType nbits
-  | chList U => list_ordType (chElement_ordType U)
-  | chSum U1 U2 => sum_ordType (chElement_ordType U1) (chElement_ordType U2)
-  end.
-
 Fixpoint chElement (U : choice_type) : choiceType :=
   match U with
   | chUnit => unit_choiceType
@@ -80,7 +62,7 @@ Fixpoint chElement (U : choice_type) : choiceType :=
   | chInt => int_choiceType
   | chBool => bool_choiceType
   | chProd U1 U2 => prod_choiceType (chElement U1) (chElement U2)
-  | chMap U1 U2 => fmap_choiceType (chElement_ordType U1) (chElement U2)
+  | chMap U1 U2 => fmap_choiceType (chElement U1) (chElement U2)
   | chOption U => option_choiceType (chElement U)
   | chFin n => fin_choiceType n
   | chWord nbits => word_choiceType nbits
@@ -98,16 +80,13 @@ Coercion chElement : choice_type >-> choiceType.
   | chInt => 0
   | chBool => false
   | chProd A B => (chCanonical A, chCanonical B)
-  | chMap A B => _
+  | chMap A B => fmap0
   | chOption A => None
   | chFin n => _
   | chWord nbits => word0
   | chList A => [::]
   | chSum A B => inl (chCanonical A)
   end.
-Next Obligation.
-  eapply fmap_of_fmap. apply emptym.
-Defined.
 Next Obligation.
   exists 0. destruct n as [p h]. simpl.
   unfold Positive in h. auto.
@@ -711,11 +690,4 @@ Section choice_typeTypes.
 
   #[short(type="choice_type_choiceMixin")]
     HB.instance Definition _ := PCanHasChoice codeK.
-
-  HB.instance Definition _ :=
-    hasOrd.Build choice_type
-      (choice_type_leqxx)
-      (choice_type_leq_trans)
-      (choice_type_leq_asym)
-      (choice_type_leq_total).
 End choice_typeTypes.

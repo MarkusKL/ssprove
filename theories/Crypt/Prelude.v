@@ -6,7 +6,6 @@ Set Warnings "-notation-overridden".
 From mathcomp Require Import ssreflect eqtype ssrbool ssrnat.
 Set Warnings "notation-overridden".
 From HB Require Import structures.
-From extructures Require Import ord fset.
 From Equations Require Import Equations.
 From SSProve.Mon Require SPropBase.
 
@@ -90,14 +89,6 @@ Ltac falso :=
   | h : context [ False_rect _ ?x ] |- _ => exact (False_rect _ x)
   end.
 
-
-(** mathcomp: derive EqDec for any ordType *)
-#[export] Instance ordType_EqDec {A : ordType} : EqDec A.
-Proof.
-  intros x y. destruct (x == y) eqn:e.
-  - move: e => /eqP. auto.
-  - move: e => /eqP. auto.
-Defined.
 
 (** Notion of positive natural number
 
