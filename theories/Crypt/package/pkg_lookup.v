@@ -2,18 +2,13 @@
 
 
 From Coq Require Import Utf8.
-From SSProve.Relational Require Import OrderEnrichedCategory
-  OrderEnrichedRelativeMonadExamples.
 Set Warnings "-ambiguous-paths,-notation-overridden,-notation-incompatible-format".
 From mathcomp Require Import ssrnat ssreflect ssrfun ssrbool ssrnum eqtype
   choice reals distr seq all_algebra fintype realsum.
 Set Warnings "ambiguous-paths,notation-overridden,notation-incompatible-format".
 From extructures Require Import ord fset fmap.
-From SSProve.Mon Require Import SPropBase.
-From SSProve.Crypt Require Import Prelude Axioms ChoiceAsOrd SubDistr Couplings
-  RulesStateProb UniformStateProb UniformDistrLemmas StateTransfThetaDens
-  StateTransformingLaxMorph choice_type pkg_core_definition pkg_notation
-  pkg_tactics pkg_composition pkg_heap pkg_semantics fmap_extra.
+From SSProve.Crypt Require Import Prelude Axioms ChoiceAsOrd
+  choice_type fmap_extra pkg_core_definition pkg_composition.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
@@ -24,10 +19,6 @@ Import Num.Theory.
 
 Set Equations With UIP.
 Set Equations Transparent.
-
-Import SPropNotations.
-Import PackageNotation.
-Import RSemanticNotation.
 
 Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
