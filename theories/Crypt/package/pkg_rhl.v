@@ -356,6 +356,7 @@ Proof.
   - cbn - [semantic_judgement lookup_op].
     apply inversion_valid_opr in vA as hA. destruct hA as [hi vk].
     destruct o as [id [S T]].
+    (*
     eapply from_valid_package in vp₀.
     specialize (vp₀ _ hi). simpl in vp₀.
     destruct vp₀ as [f₀ [e₀ h₀]].
@@ -412,6 +413,8 @@ Proof.
       * eapply inversion_valid_sampler. eauto.
       * cbn. intros s₀' s₁' [? ?]. subst. auto.
 Qed.
+     *)
+Admitted.
 
 (* TODO: generalize, this proof is the same as for eq_upto_inv_perf_ind*)
 Lemma eq_upto_pinv_perf_ind :

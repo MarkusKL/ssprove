@@ -113,35 +113,16 @@ Lemma valid_empty_package :
     ValidPackage L I [interface] emptym.
 Proof.
   intros L I.
-  apply prove_valid_package.
-  intros [id [S T]] ho. rewrite /fhas emptymE // in ho.
+  split; [ split |].
+  + intros h. exfalso. eapply fhas_empty. apply h.
+  + intros [f h]. exfalso. eapply fhas_empty. apply h.
+  + intros o f x h. exfalso. eapply fhas_empty. apply h.
 Qed.
 
 #[export] Hint Extern 1 (ValidPackage ?L ?I ?E (mkfmap [::])) =>
   try (replace E with [interface] by eapply fset0E) ;
   eapply valid_empty_package
   : typeclass_instances ssprove_valid_db.
-
-Lemma valid_package1 :
-  ∀ L I i A B f,
-    (∀ x, ValidCode L I (f x)) →
-    ValidPackage L I (mkfmap [:: (i, (A, B))]) (mkfmap [:: (i, mkdef A B f)]).
-Proof.
-  intros L I i A B f hf.
-  apply prove_valid_package.
-  intros [i' [S T]] ho. rewrite /fhas setmE emptymE //= in ho.
-  destruct (i' == i) eqn:e => //.
-  injection ho => ? ?; subst.
-  exists f.
-  move: e => /eqP -> //.
-  rewrite setmE eq_refl //.
-Qed.
-
-(* Would be a shortcut, but when backtracking, this has an unnecessary cost *)
-(* #[export] Hint Extern 1 (ValidPackage ?L ?I ?E (mkfmap [:: (?i, mkdef ?A ?B ?f)])) =>
-  eapply valid_package1 ;
-  intro ; eapply valid_code_from_class
-  : typeclass_instances. *)
 
 Lemma valid_package_cons :
   ∀ L I i A B f E p,
@@ -151,6 +132,8 @@ Lemma valid_package_cons :
       (mkfmap ((i, mkdef A B f) :: p)).
 Proof.
   intros L I i A B f E p hp hf.
+Admitted.
+(*
   apply prove_valid_package.
   intros [i' [S T]] ho. rewrite //= setmE in ho.
   destruct (i' == i) eqn:e.
@@ -164,6 +147,7 @@ Proof.
     exists g.
     rewrite //= setmE e //.
 Qed.
+ *)
 
 Lemma valid_package_cons_upto :
   ∀ L I i A B A' B' f E p,
@@ -187,37 +171,6 @@ Qed.
   | intro
   ]
   : typeclass_instances ssprove_valid_db.
-
-Lemma trimmed_empty_package :
-  trimmed [interface] (mkfmap nil).
-Proof.
-  unfold trimmed. simpl. unfold trim.
-  apply eq_fmap. intro n.
-  rewrite filtermE. rewrite emptymE. reflexivity.
-Qed.
-
-Lemma trimmed_package_cons :
-  ∀ i A B f p E,
-    trimmed (mkfmap E) (mkfmap p) →
-    trimmed (mkfmap ((i, (A, B)) :: E)) (mkfmap ((i, mkdef A B f) :: p)).
-Proof.
-  intros i A B f p E h.
-  unfold trimmed. unfold trim.
-  apply eq_fmap. intro n.
-  rewrite filtermE //= 2!setmE.
-  destruct (n == i) eqn:e => //.
-  unfold trimmed, trim in h.
-  apply eq_fmap in h. specialize (h n).
-  rewrite filtermE // in h.
-Qed.
-
-#[export] Hint Extern 1 (trimmed ?E (mkfmap [::])) =>
-  eapply trimmed_empty_package
-: typeclass_instances ssprove_valid_db.
-
-#[export] Hint Extern 2 (trimmed ?E (mkfmap ((?i, mkdef ?A ?B ?f) :: ?p))) =>
-  eapply trimmed_package_cons
-: typeclass_instances ssprove_valid_db.
 
 Lemma valid_scheme :
   ∀ A L I c,

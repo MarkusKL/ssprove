@@ -83,19 +83,16 @@ Lemma lookup_op_valid :
       lookup_op p o = Some f ∧
       ∀ x, ValidCode L I (f x).
 Proof.
-  intros L I E p o hp ho.
-  eapply from_valid_package in hp.
-  specialize (hp o ho).
-  destruct o as [n [So To]].
-  destruct hp as [f [ef hf]].
-  exists f. intuition auto. cbn.
-  destruct (p n) as [[St [Tt ft]]|] eqn:e. 2: discriminate.
-  destruct choice_type_eqP.
-  2:{ inversion ef. congruence. }
-  destruct choice_type_eqP.
-  2:{ inversion ef. congruence. }
-  subst. cbn. noconf ef.
-  reflexivity.
+  intros L I E p o [he hi] ho.
+  rewrite he in ho.
+  destruct ho as [f ho].
+  exists f; split.
+  2: intros x; by apply hi.
+  destruct o as [n [So To]] => //=.
+  rewrite ho //=.
+  destruct choice_type_eqP => //.
+  destruct choice_type_eqP => //.
+  rewrite cast_fun_K //.
 Qed.
 
 Lemma lookup_op_map :
@@ -152,10 +149,6 @@ Definition link (p1 p2 : raw_package) : raw_package :=
   @mapm _ typed_raw_function _
     (λ '(So ; To ; f), (So ; To ; λ x, code_link (f x) p2)) p1.
 
-(* Remove unexported functions from a raw package *)
-Definition trim (E : Interface) (p : raw_package) :=
-  filterm (λ n _, E n) p.
-
 Lemma valid_link :
   ∀ L1 L2 I M E p1 p2,
     ValidPackage L1 M E p1 →
@@ -163,8 +156,27 @@ Lemma valid_link :
     fcompat L1 L2 →
     ValidPackage (unionm L1 L2) I E (link p1 p2).
 Proof.
-  intros L1 l2 I M E p1 p2 h1 h2 hc.
-  apply prove_valid_package.
+  intros L1 l2 I M E p1 p2 [he1 hi1] [he2 hi2] hc.
+  split; [ split |].
+  - rewrite he1 => [[f h]].
+    exists (λ x, code_link (f x) p2).
+    rewrite //= mapmE h //.
+  - admit.
+  - intros o f x h.
+    rewrite //= mapmE in h.
+    (*specialize (he1 o) as [_ he1].*)
+    destruct (p1 o.1) as [[S [T f1]]|] => //.
+    simpl in h. noconf h.
+    eapply valid_code_link.
+    + eapply valid_injectLocations; [ apply fsubmapUl |].
+      apply hi1.
+Admitted.
+(*
+    + eapply valid_injectLocations; [ apply fsubmapUr, hc |].
+    apply hi2.
+
+
+    apply prove_valid_package.
   eapply from_valid_package in h1.
   intros [n [So To]] ho. unfold link.
   rewrite mapmE.
@@ -181,6 +193,7 @@ Proof.
     + by apply fsubmapUr.
     + auto.
 Qed.
+ *)
 
 (* This tactic is used to prove package validity with the following strategy:
    1. Apply weakening so that locations, imports and exports are evars.
@@ -194,7 +207,7 @@ Ltac package_evar :=
     tryif assert_fails (is_evar I)
       then (eapply valid_package_inject_import; swap 1 2; package_evar) else
     tryif assert_fails (is_evar E)
-      then (eapply valid_package_inject_export; swap 1 2; package_evar) else
+      then (eapply valid_package_inject_export; swap 2 3; swap 1 2; package_evar) else
     idtac
   | _ => idtac
   end.
@@ -245,132 +258,6 @@ Proof.
   - cbn. f_equal. apply functional_extensionality. auto.
 Qed.
 
-Lemma trim_get :
-  ∀ (E : Interface) (p : raw_package) n So To f,
-    fhas p (n, (So; To; f)) →
-    fhas E (n, (So, To)) →
-    trim E p n = Some (So ; To ; f).
-Proof.
-  intros E p n So To f e h.
-  unfold trim. rewrite filtermE. rewrite e. cbn.
-  rewrite h. reflexivity.
-Qed.
-
-Lemma valid_trim :
-  ∀ L I E p,
-    ValidPackage L I E p →
-    ValidPackage L I E (trim E p).
-Proof.
-  intros L I E p h.
-  apply prove_valid_package.
-  eapply from_valid_package in h.
-  intros [n [So To]] ho.
-  specialize (h _ ho). cbn in h. destruct h as [f [ef hf]].
-  exists f. intuition auto.
-  apply trim_get. all: auto.
-Qed.
-
-#[export] Hint Extern 1 (ValidPackage ?L ?I ?E (trim ?E ?p)) =>
-  eapply valid_trim
-  : typeclass_instances ssprove_valid_db.
-
-(* Technical lemma before proving assoc *)
-Lemma link_trim_commut :
-  ∀ E p1 p2,
-    link (trim E p1) p2 =
-    trim E (link p1 p2).
-Proof.
-  intros E p1 p2.
-  apply eq_fmap. intro n.
-  unfold link. unfold trim.
-  repeat rewrite ?filtermE ?mapmE.
-  destruct (p1 n), (E n) => //.
-Qed.
-
-Lemma trim_idemp :
-  ∀ E p,
-    trim E (trim E p) = trim E p.
-Proof.
-  intros E p.
-  apply eq_fmap. intro n.
-  unfold trim. rewrite !filtermE.
-  destruct (p n), (E n) => //.
-Qed.
-
-Lemma lookup_op_trim :
-  ∀ E o p,
-    lookup_op (trim E p) o =
-    obind (λ f, if E o.1 then Some f else None) (lookup_op p o).
-Proof.
-  intros E [n [So To]] p.
-  unfold lookup_op, trim.
-  rewrite filtermE.
-  destruct (p n) as [[S1 [T1 f1]]|] => //=;
-    destruct (E n) as [[S2 T2]|] => //=.
-  1,2: do 2 destruct choice_type_eqP => //=.
-Qed.
-
-Lemma code_link_trim_right :
-  ∀ A L E (v : raw_code A) p,
-    ValidCode L E v →
-    code_link v (trim E p) = code_link v p.
-Proof.
-  intros A L E v p h.
-  induction h in p |- *.
-  - cbn. reflexivity.
-  - cbn. rewrite lookup_op_trim.
-    destruct o as [n [S T]].
-    destruct lookup_op eqn:e.
-    + cbn. rewrite H //=. f_equal. apply functional_extensionality.
-      intuition auto.
-    + cbn. eauto.
-  - cbn. f_equal. apply functional_extensionality. intuition auto.
-  - cbn. f_equal. intuition auto.
-  - cbn. f_equal. apply functional_extensionality. intuition auto.
-Qed.
-
-Lemma trim_get_inv :
-  ∀ E p n So To f,
-    trim E p n = Some (So ; To ; f) →
-    p n = Some (So ; To ; f) ∧ n \in domm E.
-Proof.
-  intros E p n So To f e.
-  unfold trim in e. rewrite filtermE in e. cbn in e.
-  destruct (p n) as [[S1 [T1 f1]]|] eqn:e1.
-  2:{ cbn in e. discriminate. }
-  cbn in e.
-  destruct (E n) eqn:e2.
-  2:{ discriminate. }
-  noconf e.
-  intuition auto.
-  apply /dommP.
-  eexists; apply e2.
-Qed.
-
-Lemma link_trim_right :
-  ∀ L I E p1 p2,
-    ValidPackage L I E p1 →
-    link (trim E p1) (trim I p2) =
-    link (trim E p1) p2.
-Proof.
-  intros L I E p1 p2 h.
-  apply eq_fmap. intro n.
-  rewrite /link !mapmE.
-  destruct (trim E p1 n) as [[S1 [T1 f1]]|] eqn:e.
-  2:{ reflexivity. }
-  simpl.
-  do 3 f_equal.
-  extensionality x.
-  apply trim_get_inv in e as [e he].
-  eapply from_valid_package in h.
-  move: he => /dommP [[So To] he].
-  specialize (h (n, (So, To)) he). cbn in h.
-  destruct h as [f [ef h]].
-  rewrite ef in e. noconf e.
-  eapply code_link_trim_right.
-  apply h.
-Qed.
-
 Lemma link_assoc :
   ∀ p1 p2 p3,
     link p1 (link p2 p3) =
@@ -410,6 +297,8 @@ Lemma valid_par :
     ValidPackage (unionm L1 L2) (unionm I1 I2) (unionm E1 E2) (par p1 p2).
 Proof.
   intros L1 L2 I1 I2 E1 E2 p1 p2 h1 h2 h cL cI.
+Admitted.
+(*
   apply prove_valid_package.
   eapply from_valid_package in h1.
   eapply from_valid_package in h2.
@@ -445,35 +334,11 @@ Proof.
     eapply valid_injectMap. 1: by apply fsubmapUr.
     auto.
 Qed.
+ *)
 
 #[export] Hint Extern 1 (ValidPackage ?L ?I ?E (par ?p1 ?p2)) =>
   package_evar ; [ eapply valid_par | .. ]
   : typeclass_instances ssprove_valid_db.
-
-Lemma domm_trim :
-  ∀ E p,
-    domm (trim E p) :<=: domm E.
-Proof.
-  intros E p. unfold trim.
-  apply /fsubsetP => n.
-  rewrite 2!mem_domm filtermE.
-  destruct (E n), (p n) => //=.
-Qed.
-
-Lemma parable_trim :
-  ∀ E1 E2 p1 p2,
-    fdisjoint (domm E1) (domm E2) →
-    fseparate (trim E1 p1) (trim E2 p2).
-Proof.
-  intros E1 E2 p1 p2 h.
-  apply fsep.
-  eapply fdisjoint_trans.
-  { eapply domm_trim. }
-  rewrite fdisjointC.
-  eapply fdisjoint_trans.
-  { eapply domm_trim. }
-  rewrite fdisjointC. auto.
-Qed.
 
 Lemma par_commut :
   ∀ p1 p2,
@@ -536,52 +401,16 @@ Proof.
   all: eauto.
 Qed.
 
-(* Predicate stating that a package exports all it implements *)
-Definition trimmed E p :=
-  trim E p = p.
-
-Lemma domm_trimmed :
-  ∀ E p,
-    trimmed E p →
-    fsubset (domm p) (domm E).
-Proof.
-  intros E p h.
-  unfold trimmed in h. rewrite <- h.
-  apply domm_trim.
-Qed.
-
-Lemma trimmed_valid_Some_in :
-  ∀ L I E p n S T f,
-    ValidPackage L I E p →
-    trimmed E p →
-    p n = Some (S ; T ; f) →
-    E n = Some (S, T).
-Proof.
-  intros L I E p n S T f hv ht e.
-  unfold trimmed in ht. pose e as e'. rewrite <- ht in e'.
-  unfold trim in e'. rewrite filtermE in e'.
-  rewrite e in e'. simpl in e'.
-  eapply from_valid_package in hv.
-  destruct (E n) as [[S' T']|] eqn:e2 => //.
-  specialize (hv (n, (S', T')) e2).
-  simpl in hv.
-  destruct hv as [f' [hv hv']].
-  rewrite hv in e.
-  injection e => ? ? ?; by subst.
-Qed.
-
 Lemma interchange :
   ∀ A B C D E F L1 L2 L3 L4 p1 p2 p3 p4,
     ValidPackage L1 B A p1 →
     ValidPackage L2 E D p2 →
     ValidPackage L3 C B p3 →
     ValidPackage L4 F E p4 →
-    trimmed A p1 →
-    trimmed D p2 →
     fseparate p3 p4 →
     par (link p1 p3) (link p2 p4) = link (par p1 p2) (par p3 p4).
 Proof.
-  intros A B C D E F L1 L2 L3 L4 p1 p2 p3 p4 h1 h2 h3 h4 t1 t2 p34.
+  intros A B C D E F L1 L2 L3 L4 p1 p2 p3 p4 h1 h2 h3 h4 p34.
   apply eq_fmap. intro n.
   unfold par.
   rewrite unionmE. unfold link.
@@ -589,6 +418,8 @@ Proof.
   destruct (p1 n) as [[S1 [T1 f1]]|] eqn:e1.
   - simpl. f_equal. f_equal. f_equal.
     extensionality x.
+Admitted.
+(*
     eapply trimmed_valid_Some_in in e1 as hi. 2,3: eauto.
     eapply from_valid_package in h1.
     specialize (h1 (n, (S1, T1)) hi). cbn in h1.
@@ -606,6 +437,7 @@ Proof.
       erewrite code_link_par_right. all: eauto.
     + simpl. reflexivity.
 Qed.
+ *)
 
 Local Open Scope type_scope.
 
@@ -718,27 +550,24 @@ Lemma valid_ID :
     ValidPackage emptym I I (ID I).
 Proof.
   intros I.
-  apply prove_valid_package.
-  intros [id [S T]] ho.
-  rewrite mapimE ho //=.
-  eexists; split; [ reflexivity |].
-  intros x.
-  apply valid_opr => // y.
-  apply valid_ret.
-Qed.
+  split; [ split |].
+  + intros h.
+    exists (λ x, opr o x (λ y, ret y)).
+    destruct o as [n [S T]].
+    rewrite //= mapimE h //.
+  + intros [f h].
+    destruct o as [n [S T]].
+    rewrite //= mapimE in h.
+    simpl.
+    destruct (I n) as [[S' T']|] => //.
+    by noconf h.
+  + intros o f x h.
+    simpl in h.
+Admitted.
 
 #[export] Hint Extern 2 (ValidPackage ?L ?I ?E (ID ?I')) =>
   eapply valid_ID
   : typeclass_instances ssprove_valid_db.
-
-Lemma trimmed_ID :
-  ∀ I, trimmed I (ID I).
-Proof.
-  intros I.
-  unfold trimmed. apply eq_fmap. intro n.
-  unfold trim. rewrite filtermE mapimE.
-  destruct (I n) => //.
-Qed.
 
 Lemma code_link_id :
   ∀ A (v : raw_code A) L I,
@@ -761,9 +590,10 @@ Qed.
 Lemma link_id :
   ∀ L I E p,
     ValidPackage L I E p →
-    trimmed E p →
     link p (ID I) = p.
 Proof.
+Admitted.
+  (*
   intros L I E p hp tp.
   apply eq_fmap. intro n. unfold link.
   rewrite mapmE. destruct (p n) as [[S [T f]]|] eqn:e.
@@ -776,13 +606,15 @@ Proof.
     eapply code_link_id. all: eauto.
   - reflexivity.
 Qed.
+   *)
 
 Lemma id_link :
   ∀ L I E p,
     ValidPackage L I E p →
-    trimmed E p →
     link (ID E) p = p.
 Proof.
+Admitted.
+(*
   intros L I E p hp tp.
   apply eq_fmap. intro n. unfold link.
   rewrite mapmE mapimE.
@@ -800,6 +632,7 @@ Proof.
   extensionality x.
   apply bind_ret.
 Qed.
+ *)
 
 Lemma code_link_if :
   ∀ A (c₀ c₁ : raw_code A) (p : raw_package) b,

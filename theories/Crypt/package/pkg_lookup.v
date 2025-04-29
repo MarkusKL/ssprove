@@ -48,11 +48,12 @@ Lemma opaque_me :
     (e : lookup_op p o = None),
     B.
 Proof.
-  intros B L I E p hp o ho arg e.
+  intros B L I E p [he hi] o ho arg e.
   exfalso.
   destruct o as [n [S T]].
   cbn - [lookup_op] in e.
-  eapply from_valid_package in hp.
+Admitted.
+(*
   specialize (hp (n, (S, T)) ho). cbn in hp. destruct hp as [f [ef hf]].
   cbn in e. destruct (p n) as [[St [Tt g]]|] eqn:e2.
   2: discriminate.
@@ -62,6 +63,7 @@ Proof.
   2:{ noconf ef. congruence. }
   discriminate.
 Qed.
+ *)
 
 Equations? get_raw_package_op {L} {I E : Interface} (p : raw_package)
   (hp : ValidPackage L I E p)
@@ -89,11 +91,14 @@ Lemma get_raw_package_op_lookup :
     (get_raw_package_op p hp o ho arg).(prog) = f arg.
 Proof.
   intros L I E p hp o ho arg f e.
+Admitted.
+(*
   funelim (get_raw_package_op p hp o ho arg).
   2:{ rewrite <- e1 in e. discriminate. }
   try rewrite <- Heqcall. cbn. rewrite <- e1 in e.
   noconf e. reflexivity.
 Qed.
+ *)
 
 (* TODO Needed? MOVE? *)
 Definition code_link_ext {E : Interface}
@@ -147,6 +152,7 @@ Lemma get_raw_package_op_link {L} {I M} {E : Interface} {o : opsig}
 Proof.
   destruct (lookup_op (link p1 p2) o) as [f|] eqn:e.
   2:{
+    (*
     eapply from_valid_package in hpl as H.
     specialize (H o hin).
     destruct o as [id [S T]].
@@ -177,7 +183,10 @@ Proof.
   rewrite (get_raw_package_op_lookup p1 _ o hin arg fl el).
   apply (code_link_ext o hin arg p1 p2 fl el f e).
 Qed.
+     *)
+  Admitted.
 
+    (*
 Lemma get_raw_package_op_trim {L} {I E : Interface} {o : opsig}
       (hin : fhas E o) (arg : src o) (p : raw_package)
       (hp : ValidPackage L I E p)
@@ -208,6 +217,7 @@ Proof.
   rewrite (get_raw_package_op_lookup (trim E p) _ o hin arg f H).
   reflexivity.
 Qed.
+     *)
 
 Lemma get_raw_package_op_ext {L1 L2} {I E : Interface} {o : opsig}
       (hin : fhas E o) (arg : src o) (p : raw_package)
@@ -218,6 +228,9 @@ Lemma get_raw_package_op_ext {L1 L2} {I E : Interface} {o : opsig}
 Proof.
   destruct (lookup_op p o) as [f|] eqn:e.
   2:{
+
+Admitted.
+(*
     eapply from_valid_package in hp1 as H.
     specialize (H o hin).
     destruct o as [id [S T]].
@@ -234,6 +247,7 @@ Proof.
   rewrite (get_raw_package_op_lookup p _ o hin arg f e).
   reflexivity.
 Qed.
+ *)
 
 Definition get_opackage_op {L} {I E : Interface} (P : package L I E)
   (op : opsig) (Hin : fhas E op) (arg : src op) : code L I (tgt op).
@@ -261,10 +275,16 @@ Lemma valid_get_op_default :
     fhas E o →
     ValidCode L I (get_op_default p o x).
 Proof.
-  intros L I E p o x hp ho.
+  intros L I E p o x [he hi] ho.
   unfold get_op_default.
   destruct lookup_op eqn:e.
   - eapply lookup_op_spec in e as h.
+Admitted.
+(*
+    apply hi.
+    rewrite he.
+    specialize (hi o r x).
+    apply he.
     eapply from_valid_package in hp.
     specialize (hp _ ho). destruct o as [id [S T]].
     destruct hp as [f [ef hf]].
@@ -272,6 +292,7 @@ Proof.
     auto.
   - constructor.
 Qed.
+ *)
 
 #[export] Hint Extern 1 (ValidCode ?L ?I (get_op_default ?p ?o ?x)) =>
   eapply valid_get_op_default ; [
@@ -316,6 +337,8 @@ Proof.
     destruct p as [L [p hp]].
     destruct o as [n [S T]].
     cbn - [lookup_op] in e.
+Admitted.
+(*
     eapply from_valid_package in hp.
     specialize (hp _ ho). cbn in hp. destruct hp as [f [ef hf]].
     cbn in e. destruct (p n) as [[St [Tt g]]|] eqn:e2.
@@ -335,6 +358,7 @@ Proof.
   rewrite e in eg. noconf eg.
   eapply hg.
 Defined.
+ *)
 
 Lemma lookup_op_spec_inv :
   ∀ (p : raw_package) id S T f,
