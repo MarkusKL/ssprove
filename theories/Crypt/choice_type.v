@@ -58,34 +58,35 @@ Inductive choice_type :=
 
 Derive NoConfusion NoConfusionHom for choice_type.
 
+
 Fixpoint chElement_ordType (U : choice_type) : ordType :=
   match U with
-  | chUnit => unit_ordType
-  | chNat => nat_ordType
-  | chInt => int_ordType
-  | chBool => bool_ordType
-  | chProd U1 U2 => prod_ordType (chElement_ordType U1) (chElement_ordType U2)
-  | chMap U1 U2 => fmap_ordType (chElement_ordType U1) (chElement_ordType U2)
-  | chOption U => option_ordType (chElement_ordType U)
-  | chFin n => fin_ordType n
-  | chWord nbits => word_ordType nbits
-  | chList U => list_ordType (chElement_ordType U)
-  | chSum U1 U2 => sum_ordType (chElement_ordType U1) (chElement_ordType U2)
+  | chUnit => Datatypes.unit
+  | chNat => nat
+  | chInt => BinInt.Z
+  | chBool => bool
+  | chProd U1 U2 => chElement_ordType U1 * chElement_ordType U2
+  | chMap U1 U2 => {fmap chElement_ordType U1 → chElement_ordType U2}
+  | chOption U => option(chElement_ordType U)
+  | chFin n => ordinal n.(pos)
+  | chWord nbits => word nbits
+  | chList U => list (chElement_ordType U)
+  | chSum U1 U2 => chElement_ordType U1 + chElement_ordType U2
   end.
 
-Fixpoint chElement (U : choice_type) : choiceType :=
+Fixpoint chElement (U : choice_type) : choiceType := (*(chElement_ordType U : choiceType).*)
   match U with
-  | chUnit => unit_choiceType
-  | chNat => nat_choiceType
-  | chInt => int_choiceType
-  | chBool => bool_choiceType
-  | chProd U1 U2 => prod_choiceType (chElement U1) (chElement U2)
-  | chMap U1 U2 => fmap_choiceType (chElement_ordType U1) (chElement U2)
-  | chOption U => option_choiceType (chElement U)
-  | chFin n => fin_choiceType n
-  | chWord nbits => word_choiceType nbits
-  | chList U => list_choiceType (chElement U)
-  | chSum U1 U2 => sum_choiceType (chElement U1) (chElement U2)
+  | chUnit => Datatypes.unit
+  | chNat => nat
+  | chInt => BinInt.Z
+  | chBool => bool
+  | chProd U1 U2 => chElement U1 * chElement U2
+  | chMap U1 U2 => {fmap chElement_ordType U1 → chElement U2}
+  | chOption U => option (chElement U)
+  | chFin n => ordinal n.(pos)
+  | chWord nbits => word nbits
+  | chList U => list (chElement U)
+  | chSum U1 U2 => chElement U1 + chElement U2
   end.
 
 Coercion chElement : choice_type >-> choiceType.
@@ -93,25 +94,18 @@ Coercion chElement : choice_type >-> choiceType.
 (* Canonical element in a type of the choice_type *)
 #[program] Fixpoint chCanonical (T : choice_type) : T :=
   match T with
-  | chUnit => Datatypes.tt
+  | chUnit => tt
   | chNat => 0
   | chInt => 0
   | chBool => false
   | chProd A B => (chCanonical A, chCanonical B)
-  | chMap A B => _
+  | chMap A B => emptym
   | chOption A => None
-  | chFin n => _
+  | chFin n => Ordinal n.(cond_pos)
   | chWord nbits => word0
   | chList A => [::]
   | chSum A B => inl (chCanonical A)
   end.
-Next Obligation.
-  eapply fmap_of_fmap. apply emptym.
-Defined.
-Next Obligation.
-  exists 0. destruct n as [p h]. simpl.
-  unfold Positive in h. auto.
-Defined.
 
 Section choice_typeTypes.
 
