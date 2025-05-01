@@ -42,12 +42,7 @@ Local Open Scope ring_scope.
 (* ASymmetric Schemes *)
 Module Type AsymmetricSchemeParams.
 
-  Parameter SecurityParameter : choiceType.
-  Parameters Plain Cipher PubKey SecKey : finType.
-  Parameter plain0 : Plain.
-  Parameter cipher0 : Cipher.
-  Parameter pub0 : PubKey.
-  Parameter sec0 : SecKey.
+  Parameters Plain Cipher PubKey SecKey : fin1Type.
 
 End AsymmetricSchemeParams.
 
@@ -58,28 +53,11 @@ Module Type AsymmetricSchemeAlgorithms (π : AsymmetricSchemeParams).
 
   Local Open Scope package_scope.
 
-  (* chX is the choice_type in bijection with X  *)
-  (* Parameters chPlain chCipher chPubKey chSecKey : choice_type. *)
-  Parameter Plain_pos : Positive #|Plain|.
-  Parameter Cipher_pos : Positive #|Cipher|.
-  Parameter PubKey_pos : Positive #|PubKey|.
-  Parameter SecKey_pos : Positive #|SecKey|.
-
-  #[local] Existing Instance Plain_pos.
-  #[local] Existing Instance Cipher_pos.
-  #[local] Existing Instance PubKey_pos.
-  #[local] Existing Instance SecKey_pos.
-
-  Definition chPlain := 'fin #|Plain|.
-  Definition chCipher := 'fin #|Cipher|.
-  Definition chPubKey := 'fin #|PubKey|.
-  Definition chSecKey := 'fin #|SecKey|.
-
   Definition counter_loc : Location := (0, 'nat).
-  Definition pk_loc : Location := (1, chPubKey).
-  Definition sk_loc : Location := (2, chSecKey).
-  Definition m_loc  : Location := (3, chPlain).
-  Definition c_loc  : Location := (4, chCipher).
+  Definition pk_loc : Location := (1, PubKey : count1Type).
+  Definition sk_loc : Location := (2, SecKey : count1Type).
+  Definition m_loc  : Location := (3, Plain : count1Type).
+  Definition c_loc  : Location := (4, Cipher : count1Type).
 
   Definition kg_id : nat := 5.
   Definition enc_id : nat := 6.
@@ -91,21 +69,24 @@ Module Type AsymmetricSchemeAlgorithms (π : AsymmetricSchemeParams).
   (* Key Generation *)
   Parameter KeyGen :
     ∀ {L : Locations},
-      code L [interface] (chPubKey × chSecKey).
+      code L [interface] (PubKey × SecKey).
 
   (* Encryption algorithm *)
   Parameter Enc :
-    ∀ {L : Locations} (pk : chPubKey) (m : chPlain),
-      code L [interface] chCipher.
+    ∀ {L : Locations} (pk : PubKey) (m : Plain),
+      code L [interface] Cipher.
 
   (* Decryption algorithm *)
   Parameter Dec_open :
-    ∀ {L : Locations} (sk : chSecKey) (c : chCipher),
-      code L [interface] chPlain.
+    ∀ {L : Locations} (sk : SecKey) (c : Cipher),
+      code L [interface] Plain.
 
-  Notation " 'plain " := chPlain (in custom pack_type at level 2).
-  Notation " 'cipher " :=  chCipher (in custom pack_type at level 2).
-  Notation " 'pubkey " :=  chPubKey (in custom pack_type at level 2).
+  Notation " 'plain " := (Plain : count1Type)
+    (in custom pack_type at level 2).
+  Notation " 'cipher " := (Cipher : count1Type)
+    (in custom pack_type at level 2).
+  Notation " 'pubkey " := (PubKey : count1Type)
+    (in custom pack_type at level 2).
 
 End AsymmetricSchemeAlgorithms.
 
@@ -257,7 +238,7 @@ Module AsymmetricScheme (π : AsymmetricSchemeParams)
         '(pk, sk) ← KeyGen ;;
         #put pk_loc := pk ;;
         #put sk_loc := sk ;;
-        c ← sample uniform i_cipher ;;
+        c ← sample uniform Cipher ;;
         ret c
       }
     ].
@@ -420,7 +401,7 @@ Module AsymmetricScheme (π : AsymmetricSchemeParams)
         '(pk, sk) ← KeyGen ;;
         #put pk_loc := pk ;;
         #put sk_loc := sk ;;
-        c ← sample uniform i_cipher ;;
+        c ← sample uniform Cipher ;;
         ret c
       }
     ].

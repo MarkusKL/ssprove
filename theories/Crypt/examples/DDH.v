@@ -32,6 +32,13 @@ Import PackageNotation.
 #[local] Open Scope package_scope.
 Import GroupScope GRing.Theory.
 
+From HB Require Import structures.
+HB.howto finGroupType.
+
+#[short(type="count1Type")]
+HB.structure Definition Countable1asdf :=
+  { A of Finite A & hasOrd A & Initial A & isMulGroup A }.
+
 Module Type GroupParam.
 
   Parameter gT : finGroupType.

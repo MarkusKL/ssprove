@@ -329,11 +329,13 @@ Module PackageNotation.
   (** Utility for fin types *)
 
   (** m : 'fin n *)
+  (*
   Lemma give_fin {m} (n : nat) {h : Lt n m} : ('fin m)%pack.
   Proof.
     cbn. exists n. exact h.
   Defined.
 
   Notation gfin n := (give_fin n).
+   *)
 
 End PackageNotation.

@@ -29,6 +29,7 @@ From Equations Require Import Equations.
 Set Equations With UIP.
 
 
+
 Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
@@ -37,70 +38,87 @@ Open Scope fset.
 Open Scope fset_scope.
 Open Scope type_scope.
 
-Inductive choice_type :=
-| chUnit
-| chNat
-| chInt
-| chBool
-| chProd (A B : choice_type)
-| chMap (A B : choice_type)
-| chOption (A : choice_type)
-| chFin (n : positive)
-| chWord (nbits : wsize)
-| chList (A : choice_type)
-| chSum (A B : choice_type).
+
+HB.mixin Record Initial A := {
+  initial : A
+}.
+
+#[short(type="count1Type")]
+HB.structure Definition Countable1 :=
+  { A of Countable A & hasOrd A & Initial A }.
+
+#[short(type="fin1Type")]
+HB.structure Definition Finite1 :=
+  { A of Finite A & hasOrd A & Initial A }.
+
+Notation choice_type := count1Type.
+Notation chUnit := (unit : choice_type).
+Notation chNat := (nat : choice_type).
+Notation chInt := (BinInt.Z : choice_type).
+Notation chBool := (bool : choice_type).
+Notation chProd a b := (prod a b : choice_type).
+Notation chMap a b:= (FMap.FMap a b : choice_type).
+Notation chOption a := (option a : choice_type).
+Notation chFin n := (n : choice_type).
+Notation chWord nbits := (word nbits : choice_type).
+Notation chList := (list : choice_type).
+Notation chSum := (sum : choice_type).
 
 Derive NoConfusion NoConfusionHom for choice_type.
 
+HB.instance Definition _ :=
+  Initial.Build unit tt.
 
-Fixpoint chElement_ordType (U : choice_type) : ordType :=
-  match U with
-  | chUnit => Datatypes.unit
-  | chNat => nat
-  | chInt => BinInt.Z
-  | chBool => bool
-  | chProd U1 U2 => chElement_ordType U1 * chElement_ordType U2
-  | chMap U1 U2 => {fmap chElement_ordType U1 → chElement_ordType U2}
-  | chOption U => option(chElement_ordType U)
-  | chFin n => ordinal n.(pos)
-  | chWord nbits => word nbits
-  | chList U => list (chElement_ordType U)
-  | chSum U1 U2 => chElement_ordType U1 + chElement_ordType U2
-  end.
+HB.instance Definition _ :=
+  Initial.Build bool false.
 
-Fixpoint chElement (U : choice_type) : choiceType :=
-  match U with
-  | chUnit => Datatypes.unit
-  | chNat => nat
-  | chInt => BinInt.Z
-  | chBool => bool
-  | chProd U1 U2 => chElement U1 * chElement U2
-  | chMap U1 U2 => {fmap chElement_ordType U1 → chElement U2}
-  | chOption U => option (chElement U)
-  | chFin n => ordinal n.(pos)
-  | chWord nbits => word nbits
-  | chList U => list (chElement U)
-  | chSum U1 U2 => chElement U1 + chElement U2
-  end.
+HB.instance Definition _ :=
+  Initial.Build nat 0.
+
+HB.instance Definition _ :=
+  Initial.Build int 0.
+
+(* MK: In principle this could be a countType, however it gives universe inconsistencies later. *)
+
+HB.instance Definition _ {T : count1Type} :=
+  Initial.Build (option T) None.
+
+HB.instance Definition _ {T : fin1Type} :=
+  Initial.Build (option T) None.
+
+HB.instance Definition _ {T : count1Type} {S : count1Type} :=
+  Initial.Build (T + S) (inl initial).
+
+HB.instance Definition _ {T : fin1Type} {S : fin1Type} :=
+  Initial.Build (T + S) (inl initial).
+
+HB.instance Definition _ {T S : count1Type} :=
+  Initial.Build (T * S) (initial, initial).
+
+HB.instance Definition _ {T S : fin1Type} :=
+  Initial.Build (T * S) (initial, initial).
+
+HB.instance Definition _ {T : count1Type} :=
+  Initial.Build (seq T) [::].
+
+(* Gives universe inconsistencies
+HB.instance Definition _ (n : nat) :=
+  Initial.Build (ordinal (succn n)) Zp0.
+ *)
+
+Definition chElement_ordType (U : choice_type) : ordType := U.
+Definition chElement (U : choice_type) : choiceType := U.
 
 Coercion chElement : choice_type >-> choiceType.
 
-(* Canonical element in a type of the choice_type *)
-#[program] Fixpoint chCanonical (T : choice_type) : T :=
-  match T with
-  | chUnit => tt
-  | chNat => 0
-  | chInt => 0
-  | chBool => false
-  | chProd A B => (chCanonical A, chCanonical B)
-  | chMap A B => emptym
-  | chOption A => None
-  | chFin n => Ordinal n.(cond_pos)
-  | chWord nbits => word0
-  | chList A => [::]
-  | chSum A B => inl (chCanonical A)
-  end.
+Definition chCanonical (T : choice_type) := @initial T.
 
+Definition cucumber {T : choice_type} := @pickle T.
+Definition uncucumber {T : choice_type} := @unpickle T.
+Lemma cucumberK U : pcancel (@cucumber U) uncucumber.
+Proof. apply pickleK. Qed.
+
+(*
 Section Cucumber.
   (* Cucumber is a replacement for pickle until a
      countType for each choice_type can be given directly
@@ -253,6 +271,7 @@ Section Cucumber.
   Proof. intros x. rewrite /uncucumber -lock. f_equal. apply cucumber'K. Qed.
 
 End Cucumber.
+ *)
 
 
 Definition coerce {A B : choice_type} : A → B

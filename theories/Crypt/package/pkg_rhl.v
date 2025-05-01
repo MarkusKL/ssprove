@@ -2406,19 +2406,19 @@ Qed.
 (** Rules on uniform distributions  *)
 
 Lemma r_uniform_bij :
-  ∀ {A₀ A₁ : ord_choiceType} i j `{Positive i} `{Positive j} pre post f
+  ∀ {A₀ A₁ : ord_choiceType} F G pre post f
     (c₀ : _ → raw_code A₀) (c₁ : _ → raw_code A₁),
     bijective f →
     (∀ x, ⊢ ⦃ pre ⦄ c₀ x ≈ c₁ (f x) ⦃ post ⦄) →
     ⊢ ⦃ pre ⦄
-      x ← sample uniform i ;; c₀ x ≈
-      x ← sample uniform j ;; c₁ x
+      x ← sample uniform F ;; c₀ x ≈
+      x ← sample uniform G ;; c₁ x
     ⦃ post ⦄.
 Proof.
-  intros A₀ A₁ i j pi pj pre post f c₀ c₁ bijf h.
+  intros A₀ A₁ F G pre post f c₀ c₁ bijf h.
   eapply from_sem_jdg.
   change (repr (sampler (uniform ?i) ?k))
-  with (bindrFree (@Uniform_F (mkpos i) heap_choiceType) (λ x, repr (k x))).
+  with (bindrFree (@Uniform_F i heap_choiceType) (λ x, repr (k x))).
   eapply bind_rule_pp.
   - eapply Uniform_bij_rule. eauto.
   - intros a₀ a₁. simpl.
@@ -2446,51 +2446,46 @@ Section Uniform_prod.
   Arguments uniform_F [_] _.
 
   Lemma uniform_F_prod_bij :
-    ∀ i j `{Positive i} `{Positive j} (x : 'I_i) (y : 'I_j),
+    ∀ (F G : fin1Type) (x : F) (y : G),
       mkdistr
-        (mu := λ _ : 'I_i * 'I_j, r (x, y))
+        (mu := λ _ : F * G, r (x, y))
         (@is_uniform _ (x,y))
       =
       SDistr_bind
-        (λ z : 'I_(i * j),
-          SDistr_unit _ (ch2prod z)
+        (λ z : F * G,
+          SDistr_unit _ z
         )
         (mkdistr
-          (mu := λ f : 'I_(i * j), r f)
-          (@is_uniform _ (F_w0 (mkpos (i * j))))
+          (mu := λ f : F * G, r f)
+          (@is_uniform _ initial)
         ).
   Proof.
-    intros i j pi pj x y.
+    intros F G x y.
     apply distr_ext. simpl. intros [a b].
     unfold SDistr_bind. rewrite dletE. simpl.
     rewrite psumZ.
-    2:{
-      unshelve eapply @r_nonneg. eapply ordinal_finType_inhabited.
-      exact _.
-    }
+    2: unshelve eapply @r_nonneg; apply (a, b).
     unfold r. rewrite card_prod. simpl.
-    rewrite !card_ord.
     unfold SDistr_unit. unfold dunit. unlock. unfold drat. unlock. simpl.
     unfold mrat. simpl.
     erewrite eq_psum.
     2:{
       simpl. intro u. rewrite GRing.divr1. rewrite addn0. reflexivity.
     }
-    erewrite psum_finseq with (r := [:: prod2ch (a, b)]).
+    erewrite psum_finseq with (r := [:: (a, b)]).
     2: reflexivity.
     2:{
       simpl. intros u hu. rewrite inE in hu.
-      destruct (ch2prod u == (a,b)) eqn:e.
+      destruct (u == (a,b)) eqn:e.
       2:{
         exfalso.
         move: hu => /negP hu. apply hu.
         by [rewrite e].
       }
-      move: e => /eqP e. rewrite -e.
-      rewrite inE. apply /eqP. symmetry. apply prod2ch_ch2prod.
+      move: e => /eqP e. rewrite -e inE //.
     }
     rewrite bigop.big_cons bigop.big_nil.
-    rewrite ch2prod_prod2ch. rewrite eqxx. simpl.
+    rewrite eqxx. simpl.
     rewrite GRing.addr0. rewrite normr1.
     rewrite GRing.mulr1. reflexivity.
   Qed.
@@ -2510,34 +2505,34 @@ Section Uniform_prod.
   Qed.
 
   Lemma UniformIprod_UniformUniform :
-    ∀ (i j : nat) `{Positive i} `{Positive j},
+    ∀ (F G : fin1Type),
       ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xy ← sample uniform (i * j) ;; ret (ch2prod xy) ≈
-        x ← sample uniform i ;; y ← sample uniform j ;; ret (x, y)
+        xy ← sample uniform (F * G)%type ;; ret xy ≈
+        x ← sample uniform F ;; y ← sample uniform G ;; ret (x, y)
       ⦃ eq ⦄.
   Proof.
-    intros i j pi pj.
+    intros F G.
     change (
       ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xy ← cmd (cmd_sample (uniform (i * j))) ;;
-        ret (ch2prod xy)
+        xy ← cmd (cmd_sample (uniform (F * G)%type)) ;;
+        ret xy
         ≈
-        x ← cmd (cmd_sample (uniform i)) ;;
-        y ← cmd (cmd_sample (uniform j)) ;;
+        x ← cmd (cmd_sample (uniform F)) ;;
+        y ← cmd (cmd_sample (uniform G)) ;;
         ret (x, y)
       ⦃ eq ⦄
     ).
     eapply from_sem_jdg.
     repeat setoid_rewrite repr_cmd_bind.
     change (repr_cmd (cmd_sample (uniform ?i)))
-    with (@Uniform_F (mkpos i) heap_choiceType).
+    with (@Uniform_F i heap_choiceType).
     cbn - [semantic_judgement Uniform_F].
     eapply rewrite_eqDistrR. 1: apply: reflexivity_rule.
     intro s. cbn.
     pose proof @prod_uniform as h.
-    specialize (h (Finite.clone _ 'I_i) (Finite.clone _ 'I_j)). simpl in h.
+    specialize (h F G). simpl in h.
     unfold Uni_W'. unfold Uni_W.
-    specialize (h (F_w0 (mkpos _)) (F_w0 (mkpos _))).
+    specialize (h initial initial).
     unfold uniform_F in h.
     rewrite uniform_F_prod_bij in h.
     eapply (f_equal (SDistr_bind (λ x, SDistr_unit _ (x, s)))) in h.
@@ -2569,19 +2564,19 @@ Section Uniform_prod.
 End Uniform_prod.
 
 Lemma r_uniform_prod :
-  ∀ {A : ord_choiceType} i j `{Positive i} `{Positive j}
-    (r : fin_family (mkpos i) → fin_family (mkpos j) → raw_code A),
+  ∀ {A : ord_choiceType} (F G : fin1Type)
+    (r : F → G → raw_code A),
     (∀ x y, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y ≈ r x y ⦃ eq ⦄) →
     ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      xy ← sample uniform (i * j) ;; let '(x,y) := ch2prod xy in r x y ≈
-      x ← sample uniform i ;; y ← sample uniform j ;; r x y
+      xy ← sample uniform (F * G)%type ;; let '(x,y) := xy in r x y ≈
+      x ← sample uniform F ;; y ← sample uniform G ;; r x y
     ⦃ eq ⦄.
 Proof.
-  intros A i j pi pj r h.
+  intros A F G r h.
   change (
     ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      '(x,y) ← (z ← sample (uniform (i * j)) ;; ret (ch2prod z)) ;; r x y ≈
-      '(x,y) ← (x ← sample uniform i ;; y ← sample uniform j ;; ret (x, y)) ;; r x y
+      '(x,y) ← (z ← sample (uniform (F * G)%type) ;; ret z) ;; r x y ≈
+      '(x,y) ← (x ← sample uniform F ;; y ← sample uniform G ;; ret (x, y)) ;; r x y
     ⦃ eq ⦄
   ).
   eapply r_bind.
