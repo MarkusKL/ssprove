@@ -29,7 +29,10 @@ Section ChoiceAsOrd.
 
 End ChoiceAsOrd.
 
-Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
+Universe u.
+Constraint Choice.axioms_.u0 < u.
+
+Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat@{_ u}
     (fun (A:ord_choiceType) => A)
     (fun (A B : ord_choiceType) f => f)
     _ _ _.
