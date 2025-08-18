@@ -1,12 +1,13 @@
+Set Warnings "-notation-overridden".
+From mathcomp Require Import all_ssreflect classical_sets boolp measure.
+Set Warnings "notation-overridden".
 From SSProve.Mon Require Import SPropBase.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Crypt Require Import Casts.
-Set Warnings "-notation-overridden".
-From mathcomp Require Import all_ssreflect.
-Set Warnings "notation-overridden".
-From mathcomp Require boolp.
 
 Import SPropNotations.
+
+From HB Require Import structures.
 
 (*
 In this file we register the collection of mathcomp choicetypes "choiceType" as an ord_category instance. Morphisms between choiceTypes are endowed with a discrete order structure.
@@ -18,7 +19,7 @@ Section ChoiceAsOrd.
 
 
   Program Definition ord_choiceType : ord_category :=
-    mkOrdCategory choiceType
+    mkOrdCategory pointedType
                (fun A B => A -> B)
                (fun _ _ f g => forall x, f x =  g x) _
                (fun A a => a)
@@ -29,20 +30,27 @@ Section ChoiceAsOrd.
 
 End ChoiceAsOrd.
 
+
+Definition D (T : Type) := T.
+
+HB.instance Definition _ (T : eqType) := gen_eqMixin (D T).
+HB.instance Definition _ (T : choiceType) := gen_choiceMixin (D T).
+HB.instance Definition _ (T : pointedType) := isPointed.Build (D T) point.
+
+HB.instance Definition _ (T : pointedType) := @isMeasurable.Build default_measure_display
+  (D T) discrete_measurable discrete_measurable0
+  discrete_measurableC discrete_measurableU.
+
 Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
-    (fun (A:ord_choiceType) => A)
+    (fun (A:ord_choiceType) => D A)
     (fun (A B : ord_choiceType) f => f)
     _ _ _.
 
 
 Section Prod_of_choiceTypes.
 
-  Definition F_choice_prod_obj : Obj (prod_cat ord_choiceType ord_choiceType) ->
-                               Obj ord_choiceType.
-  Proof.
-    rewrite /prod_cat /=. move => [C1 C2].
-    exact (C1 * C2)%type.
-  Defined.
+  Definition F_choice_prod_obj : Obj (prod_cat ord_choiceType ord_choiceType) -> Obj ord_choiceType
+    := fun '(npair C1 C2) => (C1 * C2)%type.
 
   Definition F_choice_prod_morph : forall T1  T2 : (prod_cat ord_choiceType ord_choiceType),
       (prod_cat ord_choiceType ord_choiceType) ⦅ T1; T2 ⦆ ->
@@ -66,11 +74,13 @@ Section Prod_of_choiceTypes.
 
   Definition choice_fst_proj : forall {A1 A2 : ord_choiceType},
   ord_choiceType ⦅ F_choice_prod (npair A1 A2) ; A1 ⦆.
+  Proof.
     intros. intro pairr. destruct pairr as [a1 a2]. simpl in a1. assumption.
   Defined.
 
   Definition choice_snd_proj : forall {A1 A2 : ord_choiceType},
   ord_choiceType ⦅ F_choice_prod (npair A1 A2) ; A2 ⦆.
+  Proof.
     intros. intro pairr. destruct pairr as [a1 a2]. simpl in a2. assumption.
   Defined.
 

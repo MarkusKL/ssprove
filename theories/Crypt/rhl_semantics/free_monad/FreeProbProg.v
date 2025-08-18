@@ -1,5 +1,5 @@
 Set Warnings "-notation-overridden".
-From mathcomp Require Import all_ssreflect boolp.
+From mathcomp Require Import all_ssreflect boolp classical_sets.
 Set Warnings "notation-overridden".
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Crypt Require Import ChoiceAsOrd choice_type.
@@ -75,16 +75,16 @@ Section RelativeFreeMonad.
 
   (* A signature where S is the type of operations and P describes the
      arity of each operations *)
-  Context (S : Type) (P : S  -> choiceType).
+  Context (S : Type) (P : S  -> pointedType).
 
 
-  Inductive rFreeF (A : choiceType) : Type :=
+  Inductive rFreeF (A : pointedType) : Type :=
   | retrFree : A -> rFreeF A
   | ropr     : forall s, (P s -> rFreeF A) -> rFreeF A.
 
   Arguments ropr [A] _ _.
 
-  Fixpoint bindrFree {A B : choiceType} (c : rFreeF A)
+  Fixpoint bindrFree {A B : pointedType} (c : rFreeF A)
   (k : TypeCat ⦅ choice_incl A ; rFreeF B ⦆ )
   : rFreeF B :=
     match c with

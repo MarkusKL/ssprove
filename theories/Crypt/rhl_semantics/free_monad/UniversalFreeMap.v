@@ -1,7 +1,7 @@
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Mon Require Import SPropBase.
 Set Warnings "-notation-overridden".
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_ssreflect classical_sets.
 Set Warnings "notation-overridden".
 From SSProve.Crypt Require Import FreeProbProg ChoiceAsOrd.
 
@@ -16,7 +16,7 @@ Here we describe the object part of the forgetful functor U.
 Section ForgetFromRmonToOpar.
   Context (T : ord_relativeMonad choice_incl).
 
-  Definition forgOps : Type := {A : choiceType & T A}.
+  Definition forgOps : Type := {A : pointedType & T A}.
   Definition forgAr : forgOps -> choiceType := fun op => match op with |existT A _ => A end.
 
 End ForgetFromRmonToOpar.
@@ -26,7 +26,7 @@ Section UnivFreeMap.
   (*start with a morphism of signatures (given as operations and arities) σ → U(T) *)
 
   (*domain signature = arbitrary signature*)
-  Context {sigma_ops : Type} {sigma_ar : sigma_ops -> choiceType}.
+  Context {sigma_ops : Type} {sigma_ar : sigma_ops -> pointedType}.
 
   (*codomain signature = coming from a relative monad*)
   Context {T : ord_relativeMonad choice_incl}.
@@ -49,7 +49,8 @@ Section UnivFreeMap.
   Notation η := ord_relmon_unit.
   Notation dnib := ord_relmon_bind.
 
-  Fixpoint outOfFree0 (A:choiceType) (tree : Free_sigma A) {struct tree} : T A.
+  Fixpoint outOfFree0 (A:pointedType) (tree : Free_sigma A) {struct tree} : T A.
+  Proof.
   move: tree=>[|]. exact (η T A).
   move=> op opk.
   unshelve eapply (dnib T _).
@@ -89,7 +90,7 @@ End UnivFreeMap.
 
 
 Section ufmap_vs_callrFree.
-  Context (sigma_ops : Type) (sigma_ar : sigma_ops -> choiceType)
+  Context (sigma_ops : Type) (sigma_ar : sigma_ops -> pointedType)
           (T : ord_relativeMonad choice_incl).
   Context (sigMap : (forall op : sigma_ops , T ( sigma_ar op ))).
 

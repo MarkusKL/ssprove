@@ -18,6 +18,8 @@ theories/Relational/OrderEnrichedRelativeMonadExamples.v
 theories/Relational/GenericRulesSimple.v
 theories/Relational/Commutativity.v
 
+theories/giry.v
+
 theories/Crypt/Prelude.v
 theories/Crypt/Axioms.v
 theories/Crypt/jasmin_util.v
@@ -25,6 +27,7 @@ theories/Crypt/jasmin_wsize.v
 theories/Crypt/jasmin_word.v
 theories/Crypt/Casts.v
 theories/Crypt/choice_type.v
+
 
 # Categorical semantics
 

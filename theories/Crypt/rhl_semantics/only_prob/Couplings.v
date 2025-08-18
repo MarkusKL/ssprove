@@ -2,9 +2,14 @@ From SSProve.Mon Require Import FiniteProbabilities SPropMonadicStructures Speci
 From Coq Require Import RelationClasses Morphisms.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples Commutativity.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From mathcomp Require Import all_ssreflect all_algebra reals distr realsum.
+From mathcomp Require Import all_ssreflect all_algebra reals measure classical_sets.
+From mathcomp Require Import fsbigop functions reals separation_axioms.
+From mathcomp Require Import ereal sequences numfun measure measurable_realfun.
+From mathcomp Require Import lebesgue_measure lebesgue_integral.
 Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Crypt Require Import Axioms ChoiceAsOrd only_prob.SubDistr.
+
+From SSProve Require Import giry.
 
 Import SPropNotations.
 Import Num.Theory.
@@ -44,68 +49,50 @@ the product coupling for subdistributions that have a sum < 1
 Section Coupling_def.
   Context {A1 A2 : ord_choiceType}.
 
+  Definition unprodD {A B : pointedType} : D (A * B) -> D A * D B
+    := fun a => a.
+
+  Definition prodD {A B : pointedType} : D A * D B -> D (A * B)
+    := fun a => a.
+
+  Lemma measurable_unprod {A B : pointedType} :
+    measurable_fun setT (@unprodD A B).
+  Proof. done. Qed.
+
+  Definition giry_fst {d d'} {T : measurableType d} {T' : measurableType d'}
+    : giry (T * T')%type R -> giry T R
+    := fun a => giry_map measurable_fst a.
+
+  Definition D_fst {A B : pointedType}
+    : giry (D (A * B)%type) R -> giry (D A) R
+    := fun a => giry_fst (giry_map measurable_unprod a).
+
   Definition lmg :
-  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A1 )  ⦆.
-    intro d. exact (dfst d).
-  Defined.
+  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A1 )  ⦆
+    := D_fst.
+
+  Definition giry_snd {d d'} {T : measurableType d} {T' : measurableType d'}
+    : giry (T * T')%type R -> giry T' R
+    := fun a => giry_map measurable_snd a.
+
+  Definition D_snd {A B : pointedType}
+    : giry (D (A * B)%type) R -> giry (D B) R
+    := fun a => giry_snd (giry_map measurable_unprod a).
 
   Definition rmg :
-  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆.
-    intro d. exact (dsnd d).
-  Defined.
+  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆
+    := D_snd.
 
   Definition coupling (d : SDistr( F_choice_prod (npair A1 A2) ) )
   (c1 : SDistr A1) (c2 : SDistr A2) : Prop := (lmg d = c1) /\ (rmg d = c2).
 
 End Coupling_def.
 
-Section Weight_preservation.
-  Context {A1 A2 : ord_choiceType}.
-  Context (d : SDistr ( F_choice_prod (npair A1 A2))).
-  Context (c1 : SDistr A1) (c2 : SDistr A2).
-  Context (hCoupl : coupling d c1 c2).
-
-  Lemma psum_coupling_left : psum d = psum c1.
-  Proof. rewrite (@psum_pair R A1 A2 d).
-  f_equal.
-  destruct hCoupl as [lH rH]. rewrite -lH. unfold lmg.
-  apply boolp.funext. intro x1.
-  rewrite dfstE. reflexivity.
-    destruct d as [dd d2 d3 d4]. simpl. assumption.
-  Qed.
-
-  Lemma psum_coupling_right : psum d = psum c2.
-  Proof. rewrite (@psum_pair_swap R A1 A2 d).
-  f_equal.
-  destruct hCoupl as [lH rH]. rewrite -rH. unfold rmg.
-  apply boolp.funext. intro x2.
-  rewrite dsndE. reflexivity.
-    destruct d as [dd d2 d3 d4]. simpl. assumption.
-  Qed.
-
-End Weight_preservation.
-
 Section Weight_of_SDistr_unit.
   Context {A : ord_choiceType} (a : A).
 
-  Lemma psum_SDistr_unit : psum (SDistr_unit A a) = 1.
-  Proof.
-  rewrite (@psum_finseq R A (SDistr_unit A a) [::a]).
-  rewrite big_cons big_nil.
-  rewrite GRing.addr0. unfold SDistr_unit. rewrite dunit1E.
-  rewrite refl_true. simpl. rewrite normr1. reflexivity.
-    rewrite cons_uniq. apply /andP. split. trivial.
-      trivial.
-    unfold sub_mem. intro x. unfold in_mem. simpl. rewrite dunit1E.
-    intro Hx. apply /orP. left. move: Hx => /eqP. destruct (eqType_lem A a x).
-    intro Hx. apply /eqP. symmetry ; assumption.
-    assert (a == x = false).
-      apply Bool.not_true_is_false.
-      intro Hax. unshelve eapply elimT in Hax. exact (a = x).
-      contradiction. apply eqP. rewrite H0. simpl. intro H1. epose (H2 := H1 _).
-      contradiction.
-      Unshelve. reflexivity.
-  Qed.
+  Lemma psum_SDistr_unit : giry_ev (SDistr_unit A a) setT = 1%E.
+  Proof. rewrite //= diracE in_setT //. Qed.
 
 End Weight_of_SDistr_unit.
 
@@ -121,23 +108,24 @@ Section Couplings_vs_ret.
         d = SDistr_unit (F_choice_prod (npair A1 A2)) (a1,a2) ->
         coupling d (SDistr_unit A1 a1) (SDistr_unit A2 a2).
   Proof.
-    intro Hunit. split.
-    - pose (retComm := @dmargin_dunit R (F_choice_prod (npair A1 A2)) A1 (a1,a2) fst).
-      unfold lmg. rewrite Hunit. unfold SDistr_unit. simpl.
-      apply distr_ext. assumption.
-    - pose (retComm := @dmargin_dunit R (F_choice_prod (npair A1 A2)) A2 (a1,a2) snd).
-      unfold rmg. rewrite Hunit. unfold SDistr_unit. simpl.
-      apply distr_ext. assumption.
+    intro Hunit. subst. split.
+    - by apply eq_subprobability.
+    - by apply eq_subprobability.
   Qed.
 
+  (*
   Lemma lmg_SDistr_unit :
   lmg d = SDistr_unit A1 a1 ->
-  forall (x1 : A1) (x2 : A2), ~(a1 = x1) -> d(x1,x2) = 0.
+  forall (x1 : A1) (x2 : A2), ~(a1 = x1) -> d (set1 (x1,x2)) = 0.
   Proof.
     intro rHcoupl. intros x1 x2. intro Hxa.
     unfold lmg in rHcoupl. unfold SDistr_unit in rHcoupl.
-    assert (rHcoupl1 : dfst d x1 = dunit (T:=A1) a1 x1).
+    assert (rHcoupl1 : D_fst d (set1 x1) = giry_ret (a1 : D A1) (set1 x1)).
       rewrite rHcoupl. reflexivity.
+    rewrite //= diracE in rHcoupl1.
+
+    simpl in rHcoupl1.
+    rewrite D_fst in rHcoupl1.
     rewrite (dfstE d x1) (dunit1E a1 x1) in rHcoupl1.
     assert ((a1==x1 = false)).
       apply /eqP. assumption.
@@ -183,14 +171,24 @@ Section Couplings_vs_ret.
         eapply rmg_SDistr_unit. assumption. move: H => /negP H.
         intro Ha2x2. rewrite Ha2x2 in H. apply H. apply /eqP. reflexivity.
   Qed.
+   *)
 
+  (*
   Lemma weight_from_mgs (hCoupl : coupling d (SDistr_unit A1 a1) (SDistr_unit A2 a2)):
-  psum d = 1.
+  giry_ev d setT = 1%E.
   Proof.
+    move: hCoupl => [H1 H2].
+    simpl.
+    rewrite hCoupl
+    rewrite hCoupl.
+    re
+    done.
     rewrite (@psum_coupling_left A1 A2 d (SDistr_unit A1 a1) (SDistr_unit A2 a2) hCoupl).
     eapply psum_SDistr_unit.
   Qed.
+   *)
 
+  (*
   Lemma d_is_one
   (hCoupl : coupling d (SDistr_unit A1 a1) (SDistr_unit A2 a2))  :
   d(a1,a2) = 1.
@@ -229,15 +227,92 @@ Section Couplings_vs_ret.
     rewrite H. simpl. unshelve eapply lmg_rmg_SDistr_unit. assumption.
     assumption.
   Qed.
+   *)
+
+  Lemma measurable_prod {A B : pointedType} :
+    measurable_fun setT (@prodD A B).
+  Proof.
+    (*Search measurable_fun prod.
+    simpl.
+    rewrite -@prod_measurable_funP.
+       simpl. intros H Y M. *) Admitted.
+
+  Definition D_prod {A B : pointedType}
+    : giry (D A) R * giry (D B) R -> giry (D (A * B)%type) R
+    := fun a => giry_map measurable_prod (giry_prod a).
+
 
   Lemma coupling_vs_ret :
         d = SDistr_unit (F_choice_prod (npair A1 A2)) (a1,a2) <->
         coupling d (SDistr_unit A1 a1) (SDistr_unit A2 a2).
   Proof.
     split.
-    -  intro dCoupl. unshelve eapply SDistr_unit_F_choice_prod_coupling.
-       assumption.
-    -  intro dCoupl. unshelve eapply coupling_SDistr_unit_F_choice_prod.
+    - intro dCoupl. unshelve eapply SDistr_unit_F_choice_prod_coupling.
+      assumption.
+    -
+      unfold SDistr_unit.
+      move=> [H1 H2].
+      replace d with (D_prod (D_fst d, D_snd d)).
+      2: unfold D_prod, D_fst, D_snd.
+      2: admit.
+      unfold lmg in H1.
+      unfold rmg in H2.
+      rewrite H1 H2.
+      apply eq_subprobability => S.
+      unfold D_prod.
+      rewrite giry_mapE //=.
+      rewrite -fubini2 //=.
+      1: rewrite integral_dirac //=.
+      unfold fubini_G. simpl.
+      1: rewrite integral_dirac //=.
+      rewrite diracE.
+      rewrite diracE.
+      rewrite diracE.
+      rewrite -EFinM -2!GRing.Theory.natrM.
+      rewrite 2!mulnb.
+      do 2 f_equal.
+      1: admit.
+      Search (_.-integrable).
+      apply /integrableP.
+      split.
+      1: apply /prod_measurable_funP.
+      Search prod measurable_fun.
+      1: apply measurable_product.
+      1: apply measurable_fun_dirac.
+      apply integrable_indic.
+      Search dirac.
+      simpl.
+
+      rewrite G
+      1: rewrite integral_dirac //=.
+
+      Search integral product_measure1.
+      Search dirac i
+      Search  (_ \x _)%E.
+      rewrite integral_dirac.
+      rewrite diracE.
+      
+      simpl.
+      Search giry_prod.
+      unfold giry_map.
+      rewrite giry_mapE //=.
+      rewrite fubini_tonelli2 //.
+      rewrite Fubini.
+      rewrite integral_prod.
+      Search dirac integral.
+      rewrite diracE int_dirac.
+      simpl in d.
+      Check (giry_prod (D_fst d, D_snd d)).
+      simpl.
+      rewrite diracE.
+      Search dirac.
+      unfold giry_ret.
+      destruct d.
+      simpl.
+      un
+
+      
+      unshelve eapply coupling_SDistr_unit_F_choice_prod.
        assumption.
   Qed.
 

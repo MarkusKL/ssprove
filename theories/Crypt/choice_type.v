@@ -14,7 +14,7 @@ From Coq Require Import Utf8.
 From deriving Require Import deriving.
 
 Set Warnings "-ambiguous-paths,-notation-overridden,-notation-incompatible-format".
-From mathcomp Require Import all_ssreflect all_algebra word_ssrZ word.
+From mathcomp Require Import all_ssreflect all_algebra word_ssrZ word classical_sets.
 (*From mathcomp Require Import word_ssrZ word.*)
 (* From Jasmin Require Import utils word. *)
 From SSProve.Crypt Require Import jasmin_word jasmin_util.
@@ -58,13 +58,16 @@ Derive NoConfusion NoConfusionHom for choice_type.
 HB.mixin Record hasInterp (A : choice_type) T := { }.
 
 HB.structure Definition Crypt (A : choice_type)
-  := { T of Countable T & Ord.Ord T & hasInterp A T }.
+  := { T of Countable T & Pointed T & Ord.Ord T & hasInterp A T }.
 
 HB.instance Definition _
   := hasInterp.Build chUnit unit.
 
 HB.instance Definition _
   := hasInterp.Build chNat nat.
+
+HB.instance Definition _
+  := isPointed.Build BinInt.Z 0%Z.
 
 HB.instance Definition _
   := hasInterp.Build chInt BinInt.Z.
@@ -77,6 +80,10 @@ HB.instance Definition _ (A B : choice_type)
   := hasInterp.Build (chProd A B) (T * S)%type.
 
 HB.instance Definition _ (A B : choice_type)
+  (T : Crypt.type A) (S : Crypt.type B)
+  := isPointed.Build {fmap T → S} emptym.
+
+HB.instance Definition _ (A B : choice_type)
   (T : Crypt.type A) (S : Crypt.type B) :=
   @CanIsCountable _ {fmap T → S} _ _ (@fmvalK T S).
 
@@ -87,15 +94,29 @@ HB.instance Definition _ (A B : choice_type)
 HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
   := hasInterp.Build (chOption A) (option T).
 
+HB.instance Definition _ (n : positive)
+  := isPointed.Build (ordinal n.(pos)) (Ordinal n.(cond_pos)).
+
 HB.instance Definition _ n
   := hasInterp.Build (chFin n) (ordinal n.(pos)).
+
+#[non_forgetful_inheritance]
+HB.instance Definition _ nbits
+  := isPointed.Build (word nbits) word0.
 
 #[non_forgetful_inheritance]
 HB.instance Definition _ nbits
   := hasInterp.Build (chWord nbits) (word nbits).
 
 HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
+  := isPointed.Build (list T) nil.
+
+HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
   := hasInterp.Build (chList A) (list T).
+
+HB.instance Definition _ (A B : choice_type)
+  (T : Crypt.type A) (S : Crypt.type B)
+  := isPointed.Build (T + S)%type (inl point).
 
 HB.instance Definition _ (A B : choice_type)
   (T : Crypt.type A) (S : Crypt.type B)

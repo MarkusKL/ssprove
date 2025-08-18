@@ -1,9 +1,14 @@
 From Coq Require Import Relation_Definitions Morphisms.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From mathcomp Require Import all_ssreflect all_algebra distr reals realsum.
+From mathcomp Require Import all_ssreflect all_algebra reals measure classical_sets.
+From mathcomp Require Import all_ssreflect all_algebra boolp classical_sets.
+From mathcomp Require Import fsbigop functions reals separation_axioms.
+From mathcomp Require Import ereal sequences numfun measure measurable_realfun.
+From mathcomp Require Import lebesgue_measure lebesgue_integral.
 Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Crypt Require Import ChoiceAsOrd Axioms.
+From SSProve Require Import giry.
 
 Import Num.Theory.
 Import Order.POrderTheory.
@@ -31,9 +36,11 @@ They are in the file Crypt/Axioms.v
 Definition chDiscr : ord_functor ord_choiceType OrdCat
   := ord_functor_comp (choice_incl) (discr).
 
+
+(*
 Section Extensionality_for_distr.
 
-  Lemma distr_ext : forall (A : choiceType) (mu nu : {distr A/R}),
+  Lemma distr_ext : forall (A : choiceType) (mu nu : giry A R),
   distr.mu mu =1 distr.mu nu -> mu = nu. Proof.
     move=> A [mu muz mu_smbl mu_psum] [nu nuz nu_smbl nu_psum].  simpl. intro H.
     move: muz mu_smbl mu_psum nuz nu_smbl nu_psum. apply boolp.funext in H.
@@ -41,10 +48,12 @@ Section Extensionality_for_distr.
   Qed.
 
 End Extensionality_for_distr.
+ *)
 
 Section Carrier.
 
-  Definition SDistr_carrier0 (A:choiceType) := {distr A/R}.
+  (*
+  Definition SDistr_carrier0 {d} (A:measurableType d) := giry A R.
 
   Definition SDistr_carrier0_preorder A : relation (SDistr_carrier0 A) :=
   fun de1 de2 =>
@@ -68,23 +77,26 @@ Section Carrier.
     - pose (fromH23 := (H23 a)).
       erewrite unlock_absord in fromH23. assumption.
   Qed.
+   *)
 
   (*the actual carrier, on poset enriched categories (ord_category
   in the dev) *)
 
-  Program Definition SDistr_carrier (A: ord_choiceType) : TypeCat.
-    exact ({distr A/R}).
-  Defined.
+  Program Definition SDistr_carrier (A: ord_choiceType) : TypeCat
+    := giry (D A) R.
+  (*Proof. exact (giry (D A) R). Defined.*)
+  (*Search discreteTopologicalType.*)
+
 
 End Carrier.
-
 
 
 Section Unit.
 
   Definition SDistr_unit : forall (A:ord_choiceType),
   TypeCat ⦅ choice_incl A ; SDistr_carrier A ⦆.
-    intro A. intro a. exact (@dunit R A a).
+  Proof.
+    intros A a. exact (giry_ret a).
   Defined.
 
 End Unit.
@@ -94,9 +106,13 @@ Section Bind.
   Definition SDistr_bind : forall A B : ord_choiceType,
   TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆ ->
   TypeCat ⦅ SDistr_carrier A; SDistr_carrier B ⦆.
-    intros A B. intro ff. simpl in ff.
+  Proof.
+    intros A B. intro ff.
     intro mm.
-    exact (@dlet R A B ff mm). (*dlet is the bind operator defined in mathcomp*)
+    assert (measurable_fun classical_sets.setT ff).
+    { simpl. done. }
+    exact (giry_bind mm H).
+    (*exact (@dlet R A B ff mm). (*dlet is the bind operator defined in mathcomp*)*)
   Defined.
 
 End Bind.
@@ -104,29 +120,102 @@ End Bind.
 
 Section Relmon_equations.
 
+  (* Origin: https://github.com/math-comp/analysis/pull/912/files *)
+  Lemma eq_probability R d (Y : measurableType d) (m1 m2 : probability Y R) :
+    (m1 =1 m2 :> (set Y -> \bar R)) -> m1 = m2.
+  Proof.
+    move: m1 m2 => [m1 +] [m2 +] /= m1m2.
+    move/funext : m1m2 => <- -[[c11 c12] [m01] [sf1] [sig1] [fin1] [sub1] [p1]]
+                        [[c21 c22] [m02] [sf2] [sig2] [fin2] [sub2] [p2]].
+    have ? : c11 = c21 by [].
+    subst c21.
+    have ? : c12 = c22 by [].
+    subst c22.
+    have ? : m01 = m02 by [].
+    subst m02.
+    have ? : sf1 = sf2 by [].
+    subst sf2.
+    have ? : sig1 = sig2 by [].
+    subst sig2.
+    have ? : fin1 = fin2 by [].
+    subst fin2.
+    have ? : sub1 = sub2 by [].
+    subst sub2.
+    have ? : p1 = p2 by [].
+    subst p2.
+    by f_equal.
+  Qed.
+
+  Lemma eq_subprobability {d} {T : measurableType d} {R} (m1 m2 : subprobability T R)
+    : m1 =1 m2 :> (set T -> \bar R) -> m1 = m2.
+  Proof.
+    move: m1 m2 => [m1 +] [m2 +] /= m1m2.
+    move/funext : m1m2 => <- -[[c11 c12] [m01] [sf1] [sig1] [fin1] [sub1]]
+                        [[c21 c22] [m02] [sf2] [sig2] [fin2] [sub2]].
+    have ? : c11 = c21 by [].
+    subst c21.
+    have ? : c12 = c22 by [].
+    subst c22.
+    have ? : m01 = m02 by [].
+    subst m02.
+    have ? : sf1 = sf2 by [].
+    subst sf2.
+    have ? : sig1 = sig2 by [].
+    subst sig2.
+    have ? : fin1 = fin2 by [].
+    subst fin2.
+    have ? : sub1 = sub2 by [].
+    subst sub2.
+    by f_equal.
+  Qed.
+
   Lemma SDistr_rightneutral :
   forall A : ord_choiceType, SDistr_bind A A (SDistr_unit A) = Id (SDistr_carrier A).
   Proof.
     intro A. simpl. eapply boolp.funext. unfold "=1". intro de.
-    apply distr_ext. apply dlet_dunit_id.
+    apply eq_subprobability => S.
+    unfold SDistr_bind, giry_bind.
+    rewrite //= giry_mapE //.
+    rewrite giry_int_map //=.
+    by apply measurable_giry_ev.
   Qed.
 
   Lemma SDistr_leftneutral :
   forall (A B : ord_choiceType) (f : TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆),
   SDistr_bind A B f ∙ SDistr_unit A = f.
+  Proof.
     intros A B ff. simpl. simpl in ff.
-    apply boolp.funext. intro de. apply distr_ext.
-    apply dlet_unit.
+    apply boolp.funext. intro de.
+    apply eq_subprobability => S.
+    unfold SDistr_bind, giry_bind.
+    rewrite //= giry_int_map //.
+    1: rewrite giry_int_ret //.
+    by apply measurable_giry_ev.
   Qed.
 
   Lemma SDistr_assoc :
   forall (A B C : ord_choiceType) (f : TypeCat ⦅ choice_incl B; SDistr_carrier C ⦆)
     (g : TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆),
   SDistr_bind A C (SDistr_bind B C f ∙ g) = SDistr_bind B C f ∙ SDistr_bind A B g.
+  Proof.
     intros A B C f g.
     simpl in f. simpl in g. simpl.
-    apply boolp.funext. intro de. symmetry.
-    apply distr_ext. intro c. simpl. apply dlet_dlet.
+    apply boolp.funext. intro de.
+    apply eq_subprobability => S.
+    unfold SDistr_bind, giry_bind.
+    simpl.
+    rewrite giry_int_map //.
+    2: by apply measurable_giry_ev.
+    rewrite giry_int_map //.
+    2: by apply measurable_giry_ev.
+    rewrite giry_int_join //.
+    rewrite giry_int_map //.
+    2: by apply measurable_giry_int.
+    2: intros b; by apply integral_ge0.
+    apply eq_integral.
+    intros a H => //=.
+    rewrite giry_int_map //.
+    by apply measurable_giry_ev.
   Qed.
 
 End Relmon_equations.
@@ -136,7 +225,7 @@ Section Ordrelmon_instance.
   (*Here we pack all the above constructs in a ord_relativeMonad instance*)
 
    Program Definition SDistr : ord_relativeMonad choice_incl :=
-   mkOrdRelativeMonad SDistr_carrier  _  _ _ _ _ _.
+   mkOrdRelativeMonad SDistr_carrier  _ _ _ _ _ _.
    Next Obligation. exact (SDistr_unit). Defined.
    Next Obligation. exact (SDistr_bind). Defined.
    Next Obligation.

@@ -264,6 +264,10 @@ Proof.
 Qed.
 
 (*
+Search `|_|%N.
+Search dlet.
+Search `|_|%R bigop.body.
+Locate "`|".
 Lemma CELL_PICK_perf x :
   perfect IPICK (CELL ∘ PICK x) (PICK x).
 Proof.
