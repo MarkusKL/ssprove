@@ -52,8 +52,15 @@ Section Coupling_def.
   Definition unprodD {A B : pointedType} : D (A * B) -> D A * D B
     := fun a => a.
 
-  Definition prodD {A B : pointedType} : D A * D B -> D (A * B)
+  Definition prodD {A B : pointedType} : D (D A * D B) -> D (A * B)
     := fun a => a.
+
+  Definition d' {A : pointedType} : D A -> A := id.
+
+  Lemma measurable_D {d} {A : measurableType d} : measurable_fun setT (@d' A).
+  Proof.
+    done.
+  Qed.
 
   Lemma measurable_unprod {A B : pointedType} :
     measurable_fun setT (@unprodD A B).
@@ -63,9 +70,15 @@ Section Coupling_def.
     : giry (T * T')%type R -> giry T R
     := fun a => giry_map measurable_fst a.
 
-  Definition D_fst {A B : pointedType}
+  Definition D_fst' {A B : pointedType}
     : giry (D (A * B)%type) R -> giry (D A) R
     := fun a => giry_fst (giry_map measurable_unprod a).
+
+  Program Definition D_fst {A B : pointedType}
+    : giry (D (A * B)%type) R -> giry (D A) R
+    := fun gab => giry_map (f := fun ab : D (A * B)%type => ab.1 : D A) _ gab.
+  Obligation 1. done. Qed.
+
 
   Definition lmg :
   TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A1 )  ⦆
@@ -75,9 +88,24 @@ Section Coupling_def.
     : giry (T * T')%type R -> giry T' R
     := fun a => giry_map measurable_snd a.
 
-  Definition D_snd {A B : pointedType}
+  Definition D_snd' {A B : pointedType}
     : giry (D (A * B)%type) R -> giry (D B) R
     := fun a => giry_snd (giry_map measurable_unprod a).
+
+  Program Definition D_snd {A B : pointedType}
+    : giry (D (A * B)%type) R -> giry (D B) R
+    := fun gab => giry_map (f := fun ab : D (A * B)%type => ab.2 : D B) _ gab.
+  Obligation 1. done. Qed.
+
+  Program Definition D_prod_cst {A B : pointedType}
+  : A -> giry (D B) R -> giry (D (A * B)%type) R
+    := fun a gb => giry_map (f := fun b => (a, b) : D _) _ gb.
+  Obligation 1. intros. done. Qed.
+
+  Program Definition D_prod {A B : pointedType}
+    : giry (D A) R * giry (D B) R -> giry (D (A * B)%type) R
+    := fun x => giry_bind x.1 (f := fun a => D_prod_cst a x.2) _.
+  Obligation 1. done. Qed.
 
   Definition rmg :
   TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆
@@ -85,6 +113,128 @@ Section Coupling_def.
 
   Definition coupling (d : SDistr( F_choice_prod (npair A1 A2) ) )
   (c1 : SDistr A1) (c2 : SDistr A2) : Prop := (lmg d = c1) /\ (rmg d = c2).
+
+  Search product_measure1.
+  Check ((_ \x _)%E : subprobability _ _).
+
+  Lemma giry_eq
+    {d d'} {T : measurableType d} {T' : measurableType d'}
+    {a : T} {b : T'}
+    : giry_prod (giry_ret a, giry_ret b) = giry_ret (a, b) :> giry (T * T')%type R.
+  Proof.
+    apply eq_subprobability => S /=.
+    rewrite diracE /product_measure1 //=.
+    rewrite integral_dirac //.
+    rewrite diracT.
+    rewrite diracE.
+    rewrite mem_xsection mul1e //.
+  Admitted.
+
+  Lemma giry_eq' {a : D A1} {b : D A2}
+    : giry_prod (giry_ret a, giry_ret b) = giry_ret (a, b) :> giry (D A1 * D A2)%type R.
+  Proof.
+    apply eq_subprobability => S /=.
+    rewrite diracE /product_measure1 //=.
+    rewrite integral_dirac //.
+    rewrite diracT.
+    rewrite diracE.
+    rewrite mem_xsection mul1e //.
+  Qed.
+
+  Lemma giry_eq'' {a : A1} {b : A2}
+    : D_prod (@giry_ret _ (D A1) _ a, @giry_ret _ (D A2) _ b)
+    = @giry_ret _ (D (A1 * A2)%type) _ (a, b) :> giry (D (A1 * A2)%type) R.
+  Proof.
+    apply eq_subprobability => S /=.
+    rewrite giry_int_map //=.
+    2: apply measurable_giry_ev; admit.
+    rewrite giry_int_ret //.
+  Admitted.
+
+  Lemma giry_eq2 {ab : giry (D (A1 * A2)) R}
+    : D_prod (D_fst ab, D_snd ab) = ab.
+  Proof.
+    apply eq_subprobability => S /=.
+    rewrite giry_mapE //.
+    rewrite giry_mapE.
+
+    rewrite giry_int_map //.
+    2: apply measurable_giry_ev; admit.
+    rewrite giry_int_map //.
+
+    unfold giry_int.
+    simpl.
+    unfold pushforward.
+    simpl.
+    apply eq_integral.
+    2: apply measurable_giry_ev; admit.
+    Search giry_prod.
+    unfold D_fst.
+
+  (*
+  Lemma giry_eq
+    {d d'} {T : measurableType d} {T' : measurableType d'} {ab}
+    : giry_prod (giry_fst ab, giry_snd ab) = ab :> giry (T * T')%type R.
+  Proof.
+    apply eq_subprobability => S /=.
+    unfold product_measure1.
+    rewrite integral_pushforward //=.
+    Search "fubini".
+    unfold pushforward.
+    under eq_integral.
+    1: intros; rewrite -setTX; over.
+    Search giry_prod.
+    Search xsection.
+    Search (setT `*` _)%classic.
+    1: intros; rewrite xsectionE /=.
+    Search (_ @^-1` _)%classic.
+    rewrite preimage_
+    rewrite xsection_preimage_snd.
+    Search pushforward.
+    rewrite pushforwardE.
+
+    replace (ab S) with (\int[ab]_(x in S) cst 1 x)%E.
+    Search giry.
+    Search integral cst.
+    2: rewrite integral_cst ?mul1e //.
+    2: admit.
+    
+    Search integral \1__.
+    2: rewrite int
+    Search dirac integral.
+    Check integral.
+    unfold pushforward.
+
+    rewrite xsectionE.
+    Search xsection.
+    Search pushforward.
+    rewrite pushforwardE.
+    Search (\int[_]__ )%E.
+    Search (\1__).
+    Search giry_ev.
+    generalize S.
+    eapply dynkin_induction => //.
+    rewrite measureU.
+    Check measureU.
+    Search pushforward.
+    simpl.
+    
+    unfold giry_prod.
+    simpl.
+
+  Lemma dirac_prodE {T T' : pointedType}
+    {x : D T} {y : D T'} : (\d_x \x \d_y)%E = \d_(x, y) :> giry (T * T') subprobability  R.
+  Proof.
+    apply eq_subprobability.
+    intros S.
+    rewrite diracE /product_measure1 //=.
+    rewrite integral_dirac //.
+    rewrite diracT.
+    rewrite diracE.
+    rewrite mem_xsection mul1e //.
+  Qed.
+
+   *)
 
 End Coupling_def.
 
@@ -231,16 +381,27 @@ Section Couplings_vs_ret.
 
   Lemma measurable_prod {A B : pointedType} :
     measurable_fun setT (@prodD A B).
-  Proof.
-    (*Search measurable_fun prod.
-    simpl.
-    rewrite -@prod_measurable_funP.
-       simpl. intros H Y M. *) Admitted.
+  Proof. done. Qed.
 
+  (*
   Definition D_prod {A B : pointedType}
     : giry (D A) R * giry (D B) R -> giry (D (A * B)%type) R
     := fun a => giry_map measurable_prod (giry_prod a).
+   *)
 
+  (*
+  Lemma testtt {x y} {A : measurableType x} {B : measurableType y}
+    {ab : D (A * B)}
+    : giry_prod (D_fst (giry_ret ab), D_snd (giry_ret ab)) = giry_ret ab.
+  Proof.
+    apply eq_subprobability => z.
+    simpl.
+    rewrite diracE.
+    Search (_ \x _)%E.
+    Search pushforward.
+  Admitted.
+
+   *)
 
   Lemma coupling_vs_ret :
         d = SDistr_unit (F_choice_prod (npair A1 A2)) (a1,a2) <->
@@ -252,6 +413,85 @@ Section Couplings_vs_ret.
     -
       unfold SDistr_unit.
       move=> [H1 H2].
+      rewrite -giry_eq''.
+      rewrite -H1 -H2.
+      unfold lmg, rmg.
+      apply eq_subprobability => S.
+      simpl.
+      rewrite giry_int_map //=.
+      2: apply measurable_giry_ev; admit.
+      rewrite giry_mapE.
+      unfold D_fst.
+      rewrite giry_int_map //=.
+      apply eq_integral => //=.
+      2: apply measurable_id.
+      2: admit.
+      intros [x y] _.
+      simpl.
+      unfold pushforward.
+      Search pushforward.
+      rewrite pushforward.
+      
+      simpl.
+
+      unfold giry_int.
+
+      unfold "\o".
+      unfold giry_int.
+      under eq_integral.
+      1: intros.
+      unfold giry_ev, D_prod_cst.
+      rewrite giry_mapE //.
+      over.
+      simpl.
+      un
+      Search giry_int.
+      Search giry_int eq.
+      simpl.
+      unfold pushforward.
+      unfold D_prod_cst.
+      simpl.
+      done.
+
+      unfold giry_int.
+      Search giry_int eq.
+      rewrite giry_intE.
+      rewrite giry_map_comp.
+      rewrite giry_int_map //=.
+      Search giry_int.
+      2: eapply (measurable_comp _ _ (measurable_giry_ev _)).
+      2: unfold D_prod_cst.
+      2: eapply measurable_giry_map.
+      2: done.
+
+      2: apply measurable_giry_ev; admit.
+
+      rewrite /D_fst giry_int_ret.
+
+      Set Printing All.
+      rewrite -(@giry_eq' A1 A2 a1 a2).
+      unfold lmg, D_fst in H1.
+      unfold rmg, D_snd in H2.
+      simpl.
+      simpl in *.
+      change a1 with (a1 : D A1).
+      change a2 with (a2 : D A2).
+      Set Printing All.
+      rewrite -(@dirac_prodE A1 A2 a1 a2 S).
+      change (\d_(a1, a2)) with (\d_(a1 : D A1, a2 : D A2)).
+      Search giry_map.
+      change d with (giry_prod (D_fst d, D_snd d)).
+      Set Printing All.
+      replace (@giry_ret _ (D (D A1 * D A2)) R (a1, a2))
+        with (giry_prod (@giry_ret _ (D A1) _ a1, @giry_ret _ (D A2) _ a2)).
+      replace d with (giry_prod (giry_ret a1, giry_ret b)).
+      rewrite -testtt.
+      simpl in H1, H2.
+      Set Printing Implicit.
+      simpl.
+      unfold F_choice_prod_obj.
+      simpl.
+
       replace d with (D_prod (D_fst d, D_snd d)).
       2: unfold D_prod, D_fst, D_snd.
       2: admit.
@@ -274,6 +514,7 @@ Section Couplings_vs_ret.
       1: admit.
       Search (_.-integrable).
       apply /integrableP.
+      Search measurable_fun.
       split.
       1: apply /prod_measurable_funP.
       Search prod measurable_fun.
