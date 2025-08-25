@@ -22,11 +22,11 @@ Section ForgetFromRmonToOpar.
 End ForgetFromRmonToOpar.
 
 
+(*
 Section UnivFreeMap.
   (*start with a morphism of signatures (given as operations and arities) σ → U(T) *)
 
   (*domain signature = arbitrary signature*)
-  Context {sigma_ops : Type} {sigma_ar : sigma_ops -> choiceType}.
 
   (*codomain signature = coming from a relative monad*)
   Context {T : ord_relativeMonad choice_incl}.
@@ -38,9 +38,9 @@ Section UnivFreeMap.
   (* Hypothesis (slicemorph : forall op : sigma_ops, T_ar (sigMap (op)) = sigma_ar op). *)
   (*To avoid the need for equality transports we remark that to give such a morphism is
    the same as giving a section like this:*)
-  Context  (sigMap : forall op : sigma_ops , T (sigma_ar op) ).
+  Context  (sigMap : forall op : choiceType , T (op) ).
 
-  Let Free_sigma := rFree sigma_ops sigma_ar. (*the domain relative monad*)
+  Let Free_sigma := rFree. (*the domain relative monad*)
 
   Definition trivialChi :
   natIso choice_incl (ord_functor_comp choice_incl (ord_functor_id TypeCat)) :=
@@ -53,7 +53,7 @@ Section UnivFreeMap.
   move: tree=>[|]. exact (η T A).
   move=> op opk.
   unshelve eapply (dnib T _).
-    exact (sigma_ar op).
+    exact (op).
     simpl. move=> a0. apply outOfFree0. apply opk. exact a0.
     apply sigMap.
   Defined.
@@ -62,6 +62,9 @@ Section UnivFreeMap.
   Program Definition outOfFree : relativeMonadMorphism (ord_functor_id _) trivialChi Free_sigma T :=
     mkRelMonMorph (ord_functor_id _) trivialChi Free_sigma T _ _ _.
   Next Obligation.
+    intros A.
+    apply boolp.funext => a.
+    unfold outOfFree_obligation_1.
     exact outOfFree0.
   Defined.
   Next Obligation.
@@ -104,3 +107,4 @@ Section ufmap_vs_callrFree.
   Qed.
 
 End ufmap_vs_callrFree.
+ *)

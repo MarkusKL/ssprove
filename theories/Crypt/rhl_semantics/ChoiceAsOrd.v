@@ -30,7 +30,7 @@ Section ChoiceAsOrd.
 End ChoiceAsOrd.
 
 Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
-    (fun (A:ord_choiceType) => A)
+    (fun (A:ord_choiceType) => A : Type@{Choice.type.u0})
     (fun (A B : ord_choiceType) f => f)
     _ _ _.
 

@@ -95,7 +95,7 @@ Section Unary_effobs.
 
   Definition unary_ThetaDens0 : forall (A:choiceType) (tree : rFreePr A),
   SDistr_carrier A.
-    move=> A. elim=> [a | [X op] /= sbtrs IH].
+    move=> A. elim=> [a | X /= sbtrs IH].
       apply SDistr_unit. simpl. assumption.
     (*IH: each subtree, indexed by x:chElement X has already produced a SDistr A*)
     eapply SDistr_bind. all: revgoals.
