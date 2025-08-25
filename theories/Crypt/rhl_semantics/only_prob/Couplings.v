@@ -10,6 +10,7 @@ Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Crypt Require Import Axioms ChoiceAsOrd only_prob.SubDistr.
 
 From SSProve Require Import giry.
+From HB Require Import structures.
 
 Import SPropNotations.
 Import Num.Theory.
@@ -46,13 +47,21 @@ the product coupling for subdistributions that have a sum < 1
 
 
 
+#[short(type=count1Type)]
+HB.structure Definition Countable1 := {T of isPointed T & Countable T}.
+
+HB.instance Definition _ := Pointed.on bool.
+
+Check (bool : count1Type).
+
 Section Coupling_def.
-  Context {A1 A2 : ord_choiceType}.
+  (*Context {A1 A2 : ord_choiceType}.*)
+  Context {A1 A2 : count1Type}.
 
   Definition unprodD {A B : pointedType} : D (A * B) -> D A * D B
     := fun a => a.
 
-  Definition prodD {A B : pointedType} : D (D A * D B) -> D (A * B)
+  Definition prodD {A B : pointedType} : (D A * D B) -> D (A * B)
     := fun a => a.
 
   Definition d' {A : pointedType} : D A -> A := id.
@@ -65,6 +74,36 @@ Section Coupling_def.
   Lemma measurable_unprod {A B : pointedType} :
     measurable_fun setT (@unprodD A B).
   Proof. done. Qed.
+
+  (*
+  Lemma prodD_prod {A B : Type} {Y : set (A * B)}
+     : (prodD @^-1` Y) = \bigcup[xy \in Y] xy.
+   *)
+
+  (*
+  About pointedType.
+  HB.howto pointedType.
+  HB.pointedCountType
+   *)
+
+  Lemma measurable_prodD {A B : count1Type} : measurable_fun setT (@prodD A B).
+  Proof.
+    intros S Y _.
+    simpl in *.
+    rewrite setTI /prodD preimage_id.
+    replace Y with (\bigcup_(y : (A * B)) if y \in Y then [set y] else set0)%classic.
+    2: rewrite -bigcup_mkcond (bigcup_imset1 Y id) image_id //.
+    apply countable_bigcupT_measurable.
+    1: apply cardinality.countableP.
+    intros [a b].
+    destruct ((a, b) \in Y) => //.
+    replace ([set (a, b)])%classic with ([set a] `*` [set b])%classic.
+    2: apply eq_set => ab; destruct ab => //=. 
+    2: apply boolp.propext.
+    2: symmetry. 
+    2: apply pair_equal_spec.
+    by apply measurableX.
+  Qed.
 
   Definition giry_fst {d d'} {T : measurableType d} {T' : measurableType d'}
     : giry (T * T')%type R -> giry T R
@@ -99,13 +138,14 @@ Section Coupling_def.
 
   Program Definition D_prod_cst {A B : pointedType}
   : A -> giry (D B) R -> giry (D (A * B)%type) R
-    := fun a gb => giry_map (f := fun b => (a, b) : D _) _ gb.
+  (*:= fun a gb => giry_map (f := fun b => (a, b) : D _) _ gb.*)
+    := fun a gb => giry_bind gb (f := fun b => @giry_ret _ (D _) _ (a, b)) _.
   Obligation 1. intros. done. Qed.
 
-  Program Definition D_prod {A B : pointedType}
+  Program Definition D_prod {A B : count1Type}
     : giry (D A) R * giry (D B) R -> giry (D (A * B)%type) R
-    := fun x => giry_bind x.1 (f := fun a => D_prod_cst a x.2) _.
-  Obligation 1. done. Qed.
+    (*:= fun x => giry_bind x.1 (f := fun a => D_prod_cst a x.2) _.*)
+    := fun x => giry_map measurable_prodD (giry_prod x).
 
   Definition rmg :
   TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆
@@ -113,9 +153,6 @@ Section Coupling_def.
 
   Definition coupling (d : SDistr( F_choice_prod (npair A1 A2) ) )
   (c1 : SDistr A1) (c2 : SDistr A2) : Prop := (lmg d = c1) /\ (rmg d = c2).
-
-  Search product_measure1.
-  Check ((_ \x _)%E : subprobability _ _).
 
   Lemma giry_eq
     {d d'} {T : measurableType d} {T' : measurableType d'}
@@ -150,12 +187,45 @@ Section Coupling_def.
     2: apply measurable_giry_ev; admit.
     rewrite giry_int_ret //.
   Admitted.
+  Search giry_prod.
+
+  Lemma asedflk {A B : pointedType} {ab : giry (D A) R * giry (D B) R} {F : set (D (A * B))}
+  (*: D_prod ab F = giry_int ab.1 (fun x => giry_int ab.2 (fun y => giry_ret (x, y) F)).*)
+    : D_prod ab F = giry_int (giry_prod ab) (fun xy => giry_ret xy F).
+  Proof.
+    destruct ab as [a b].
+    rewrite giry_int_prod1 /D_prod //=.
+    rewrite giry_int_map.
+    (*2: apply measurable_giry_ret.*)
+  Admitted.
+
+  Lemma asdfs {ab : giry (D (A1 * A2)) R} : giry_prod (D_fst ab, D_snd ab) = giry_map measurable_unprod ab.
+  Proof. Admitted.
 
   Lemma giry_eq2 {ab : giry (D (A1 * A2)) R}
     : D_prod (D_fst ab, D_snd ab) = ab.
   Proof.
-    apply eq_subprobability => S /=.
+    apply eq_subprobability => S.
+    rewrite asedflk asdfs.
+    rewrite giry_int_map //=.
+    (*Search "unique" "measure".*)
+    2: apply measurable_fun_dirac; admit.
+    rewrite giry_fst.
+    simpl.
+    simpl.
     rewrite giry_mapE //.
+    Search giry_prod.
+    Search giry_int giry_prod.
+    rewrite -giry_int_prod1.
+
+    rewrite giry_int_2.
+    unfold giry_ev.
+
+    rewrite -giry_int_prod1.
+    Search giry_int.
+    Search giry_int.
+    rewrite giry_mapE //.
+    Search giry_map.
     rewrite giry_mapE.
 
     rewrite giry_int_map //.
@@ -249,7 +319,8 @@ End Weight_of_SDistr_unit.
 
 Section Couplings_vs_ret.
 
-  Context {A1 A2 : ord_choiceType}.
+  Context {A1 A2 : count1Type}.
+  (*Context {A1 A2 : ord_choiceType}.*)
   Context (a1 : A1) (a2 : A2) (d : SDistr( F_choice_prod (npair A1 A2) )).
 
   (*the left and right marginals of the unit coupling are the units for
