@@ -3,6 +3,8 @@ Set Warnings "-notation-overridden".
 From mathcomp Require Import all_ssreflect.
 Set Warnings "notation-overridden".
 
+Set Universe Polymorphism.
+
 Obligation Tactic := try (Tactics.program_simpl ; fail) ; simpl.
 
 

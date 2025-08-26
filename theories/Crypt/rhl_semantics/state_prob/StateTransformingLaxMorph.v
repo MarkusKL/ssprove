@@ -8,6 +8,8 @@ Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Crypt Require Import Axioms OrderEnrichedRelativeAdjunctions LaxFunctorsAndTransf LaxMorphismOfRelAdjunctions TransformingLaxMorph OrderEnrichedRelativeAdjunctionsExamples ThetaDex SubDistr Theta_exCP ChoiceAsOrd FreeProbProg UniversalFreeMap RelativeMonadMorph_prod LaxComp choice_type Casts.
 (* From SSProve.Crypt Require Import only_prob.Rules. *)
 
+Set Universe Polymorphism.
+
 Import SPropNotations.
 
 (*In this file we transform the lax relative monad morphism thetaDex : FreeProb² → Wrelprop
@@ -219,7 +221,7 @@ Section UnaryInterpretState.
     retrFree_filled (F_choice_prod ⟨unit_choiceType, S⟩) (tt, new_s).
 
 
-  Definition probopStP {T : choice_type} (sd: SDistr T) : stT_Frp T.
+  Definition probopStP {T : choiceType} (sd: SDistr T) : stT_Frp T.
     move=> s. simpl.
     unshelve eapply ropr.
       unshelve econstructor. exact T. exact sd.

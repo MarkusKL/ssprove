@@ -8,6 +8,8 @@ From SSProve.Crypt Require Import Axioms OrderEnrichedRelativeAdjunctions LaxFun
 
 Import SPropNotations.
 
+Set Universe Polymorphism.
+
 
 (*
 In this file we implement the following transformations:

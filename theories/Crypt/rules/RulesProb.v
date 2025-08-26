@@ -40,6 +40,8 @@ Import Order.POrderTheory.
 
 Local Open Scope ring_scope.
 
+Set Universe Polymorphism.
+
 
 Module DerivedRules.
 
@@ -527,12 +529,16 @@ Fixpoint bounded_iter {A B : choiceType} (n : nat) (c : A -> MFreePr (A + B)%typ
                                            end) (c a)
   end.
 
-Definition bounded_loop {A B : choiceType} (n : nat) (b : A -> MFreePr bool) (c : A -> MFreePr A) (a : A) :
-  MFreePr (unit_choiceType + A)%type :=
-  bounded_iter n (fun a' => ord_relmon_bind MFreePr (fun b => match b with
-       | true => ord_relmon_bind MFreePr (fun a2 => ord_relmon_unit MFreePr _ (inr a2)) (c a')
-       | false => ord_relmon_unit MFreePr _ (inl a')
-                                                        end) (b a')) a.
+(*
+Definition bounded_loop {A : choiceType} (n : nat) (b : A -> MFreePr bool) (c : A -> MFreePr A) (a : A) :
+  MFreePr (unit + A)%type :=
+  bounded_iter n (fun a' => ord_relmon_bind MFreePr
+  (fun b => match b with
+            | true => ord_relmon_bind MFreePr
+                  (fun a2 => ord_relmon_unit MFreePr _ (inr a2)) (c a')
+            | false => ord_relmon_unit MFreePr _ (inl a')
+            end) (b a')) a.
+ *)
 
 (* Rem.: this a variant following what's in The next 700... *)
 Fixpoint bounded_do_while  (n : nat) (c : MFreePr bool) :

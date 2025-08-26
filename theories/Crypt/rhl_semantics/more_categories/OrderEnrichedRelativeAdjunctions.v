@@ -5,6 +5,8 @@ Set Warnings "-notation-overridden".
 From mathcomp Require Import all_ssreflect boolp.
 Set Warnings "notation-overridden".
 
+Set Universe Polymorphism.
+
 Import SPropNotations.
 
 Obligation Tactic := try (Tactics.program_simpl ; fail) ; simpl.

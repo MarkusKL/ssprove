@@ -6,6 +6,8 @@ From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelati
 From SSProve.Crypt Require Import ChoiceAsOrd SubDistr Couplings Axioms Casts.
 From HB Require Import structures.
 
+Set Universe Polymorphism.
+
 Import SPropNotations.
 Import Num.Theory.
 Import Order.POrderTheory.

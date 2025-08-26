@@ -4,6 +4,8 @@ Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect.
 Set Warnings "notation-overridden,ambiguous-paths".
 
+Set Universe Polymorphism.
+
 (*
 we have at our disposal θex : SDistr² → Wrelprop . We turn this lax morphism
 into θdex : FreeProb² → Wrelprop by precomposing it with θdens : FreeProb² → SDistr².

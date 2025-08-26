@@ -5,6 +5,8 @@ From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelati
 From SSProve.Crypt Require Import ChoiceAsOrd choice_type.
 From SSProve.Crypt Require Import SubDistr.
 
+Set Universe Polymorphism.
+
 
 (*so that Next Obligation doesnt introduce variables by itself:*)
 Obligation Tactic := try (Tactics.program_simpl ; fail) ; simpl.
@@ -73,10 +75,14 @@ Section RelativeFreeMonad.
    probabilistic operations. *)
 
 
+  (* A signature where S is the type of operations and P describes the
+     arity of each operations *)
+  Context (S : Type) (P : S  -> choiceType).
+
 
   Inductive rFreeF (A : choiceType) : Type :=
   | retrFree : A -> rFreeF A
-  | ropr     : forall s : choiceType, (s -> rFreeF A) -> rFreeF A.
+  | ropr     : forall s, (P s -> rFreeF A) -> rFreeF A.
 
   Arguments ropr [A] _ _.
 
@@ -88,7 +94,7 @@ Section RelativeFreeMonad.
     | ropr s ar  => ropr s (fun p => bindrFree (ar p) k)
     end.
 
-  Definition callrFree (S : choiceType) : rFreeF S := ropr S (fun k => retrFree _ k).
+  Definition callrFree (s : S) : rFreeF (P s) := ropr s (fun k => retrFree _ k).
 
 
   Program Definition rFree : ord_relativeMonad choice_incl :=
@@ -120,15 +126,13 @@ End RelativeFreeMonad.
 Section Unary_free_prob_monad.
 
   (* the type of probabilistic operations*)
-  (*
-  Definition P_OP  := { X : choice_type & SDistr X }.
+  Definition P_OP  := { X : choiceType & SDistr X }.
 
   (* the arities for operations in OPP*)
   Definition P_AR : P_OP -> choiceType :=
     fun op => projT1 op.
-   *)
 
-  Definition rFreePr := rFree.
+  Definition rFreePr := rFree P_OP P_AR.
 
 End Unary_free_prob_monad.
 

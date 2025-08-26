@@ -8,6 +8,8 @@ From SSProve.Crypt Require Import OrderEnrichedRelativeAdjunctions FreeProbProg 
 
 Import SPropNotations.
 
+Set Universe Polymorphism.
+
 
 (*
 Let M: I → C be a J-relative monad.

@@ -5,6 +5,8 @@ Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Crypt Require Import ChoiceAsOrd Axioms.
 
+Set Universe Polymorphism.
+
 Import Num.Theory.
 Import Order.POrderTheory.
 

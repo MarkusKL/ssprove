@@ -5,6 +5,8 @@ From mathcomp Require Import all_ssreflect boolp.
 Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Crypt Require Import Axioms OrderEnrichedRelativeAdjunctions LaxFunctorsAndTransf.
 
+Set Universe Polymorphism.
+
 Import SPropNotations.
 (*
 In this file we define the notion of lax morphism between left relative adjunctions.

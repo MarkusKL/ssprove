@@ -8,6 +8,8 @@ From mathcomp Require boolp.
 
 Import SPropNotations.
 
+Set Universe Polymorphism.
+
 (*
 In this file we register the collection of mathcomp choicetypes "choiceType" as an ord_category instance. Morphisms between choiceTypes are endowed with a discrete order structure.
 
@@ -30,7 +32,7 @@ Section ChoiceAsOrd.
 End ChoiceAsOrd.
 
 Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
-    (fun (A:ord_choiceType) => A : Type@{Choice.type.u0})
+  (fun (A:ord_choiceType) => A : Type@{Choice.type.u0})
     (fun (A B : ord_choiceType) f => f)
     _ _ _.
 
@@ -41,7 +43,7 @@ Section Prod_of_choiceTypes.
                                Obj ord_choiceType.
   Proof.
     rewrite /prod_cat /=. move => [C1 C2].
-    exact (C1 * C2)%type.
+    exact (C1 * C2 (*: Type@{Choice.type.u0}*))%type.
   Defined.
 
   Definition F_choice_prod_morph : forall T1  T2 : (prod_cat ord_choiceType ord_choiceType),
