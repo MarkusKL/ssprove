@@ -1382,6 +1382,21 @@ Proof.
     + simpl. intuition subst. auto.
 Qed.
 
+Lemma rsame_head_eq :
+  ∀ {A B : ord_choiceType} {f₀ f₁ : A → raw_code B}
+    {m₀ m₁ : raw_code A},
+    ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ m₀ ≈ m₁ ⦃ eq ⦄ →
+    (∀ a, ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ f₀ a ≈ f₁ a ⦃ eq ⦄) →
+    ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ x ← m₀ ;; f₀ x ≈ x ← m₁ ;; f₁ x ⦃ eq ⦄.
+Proof.
+  intros A B f₀ f₁ m₀ m₁ Hm Hf.
+  eapply r_bind; [ apply Hm |] => a₀ a₁.
+  eapply rpre_hypothesis_rule => s₀ s H.
+  injection H => ? ? {H}; subst.
+  eapply rpre_weaken_rule; [ apply Hf |] => s₀ s₁ /= [? ?].
+  by subst.
+Qed.
+
 Lemma cmd_sample_preserve_pre :
   ∀ (op : Op) pre,
     ⊢ ⦃ λ '(s₀, s₁), pre (s₀, s₁) ⦄
