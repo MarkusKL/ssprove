@@ -243,10 +243,8 @@ Section KEMDEM.
       } ;
       #def #[ GET ] (_ : 'unit) : 'key {
         k ← get k_loc ;;
-        match k with
-        | Some(k) => ret k
-        | _ => fail
-        end
+        #assert (isSome k) as kSome ;;
+        ret (getSome k kSome)
       }
     ].
 
@@ -730,128 +728,6 @@ Section KEMDEM.
   Instance Invariant_inv : Invariant PKE_CCA_loc Aux_loc inv.
   Proof. ssprove_invariant => //. Qed.
 
-  Lemma destruct_pair {A B C} {z : A * B} {f : A → B → C}
-    : (let (x, y) := z in f x y) = f z.1 z.2.
-  Proof. by destruct z. Qed.
-
-  Definition hints :=
-    ( @destruct_pair
-    , @code_link_assertD
-    , @code_link_bind
-    , @bind_assoc
-    (*, @code_link_scheme*)
-    , @resolve_set
-    , @resolve_link
-    , @resolve_ID_set
-    , @coerce_kleisliE
-    , @code_link_if
-    ).
-
-  Ltac ssprove_simpl := simpl ; repeat (first
-    [ (rewrite hints //=)
-    | (rewrite -> (code_link_scheme _ _ (_.(prog))) by apply prog_valid)
-    | (eapply r_transR ; [ eapply r_bind_assertD_sym | ])
-    ]).
-
-  Lemma if_case_rule :
-    ∀ {A₀ A₁ : ord_choiceType} (c₀ c₀' : raw_code A₀) 
-      (c₁ c₁' : raw_code A₁) {b : bool} {pre : precond} 
-      {post : postcond A₀ A₁}
-      , ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄
-      → ⊢ ⦃ pre ⦄ c₀' ≈ c₁' ⦃ post ⦄
-      → ⊢ ⦃ pre ⦄ if b then c₀ else c₀' ≈
-             if b then c₁ else c₁' ⦃ post ⦄.
-  Proof. by intros ? ? ? ? ? ? []. Qed.
-  
-  Notation "'#match' p ':=' u ;; c" :=
-    (match u with p => c | _ => fail end)
-    (at level 100, p pattern, u at next level, right associativity,
-    format "#match  p  :=  u  ;;  '//' c")
-    : package_scope.
-
-  Lemma rsame_head_getr :
-    ∀ {B : ord_choiceType} {l : Location} {f₀ f₁ : l → raw_code B} 
-      (post : postcond B B),
-      (∀ a : l, ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ f₀ a ≈ f₁ a ⦃ post ⦄)
-      → ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ x ← get l ;;
-                                   f₀ x ≈ x ← get l ;;
-                                          f₁ x ⦃ post ⦄.
-  Proof. intros. by apply (rsame_head_cmd (cmd_get l)). Qed.
-
-  Ltac ssprove_rel_cong_rhs :=
-    ssprove_simpl ;
-    lazymatch goal with
-    | |- ⊢ ⦃ _ ⦄ _ ≈ ?c ⦃ _ ⦄ =>
-      lazymatch c with
-      | x ← sample ?op ;; _ =>
-        let x' := fresh x in
-        eapply (rsame_head_cmd (cmd_sample op)) ; intros x'
-      | #put ?ℓ := ?v ;; _ =>
-        eapply (@rsame_head_cmd _ _ (λ z, _) (λ z, _) (cmd_put ℓ v)) ; intros _
-      | p ← get ?ℓ ;; _ =>
-        let x' := fresh p in
-        instantiate (1 := x' ← get _ ;; _ x') ;
-        eapply (@rsame_head_getr _ ℓ (λ x', _)) ; intros x'
-        (*
-        eapply (rsame_head_cmd (cmd_get ℓ)) ; intros x'
-        ; change (cmd_bind (cmd_get ?ℓ) ?k) with (getr ℓ k)
-        ; cbn beta
-         *)
-      | p ← cmd ?c ;; _ =>
-        let x' := fresh p in
-        eapply (rsame_head_cmd c) ; intros x'
-      | @assertD ?A ?b (λ x, _) =>
-        let x' := fresh x in
-        eapply (r_assertD_same A b _ _ (λ x', _)) ; intros x'
-      | bind (match ?e with _ => _ end) (λ y, _) =>
-        idtac "hit matc" ;
-        instantiate (1 := #match _ := e ;; _) ;
-        (*instantiate (1 := ltac:(let _ := type of e in destruct e)) ;*)
-        destruct e ; intros
-      | bind _ (λ p, _) =>
-        let x' := fresh p in
-        eapply (rsame_head_eq); [| intros x' ]
-      | if ?e then _ else _ =>
-        eapply if_case_rule
-      | (match ?e with _ => _ end) =>
-        idtac "hit matc" ;
-        instantiate (1 := ltac:(let _ := type of e in destruct e)) ;
-        destruct e ; intros
-      | fail =>
-        eapply @rreflexivity_rule
-      | ret _ =>
-        eapply @rreflexivity_rule
-      | prog _ =>
-        eapply @rreflexivity_rule
-      | c => idtac "failed to traverse:" c 
-      end
-    end.
-
-  Ltac ssprove_rel_cong :=
-    lazymatch goal with
-    | |- ⊢ ⦃ _ ⦄ _ ≈ _ ⦃ _ ⦄ =>
-      eapply rel_jdg_replace_sem ; [
-      | solve [ repeat ssprove_rel_cong_rhs ]
-      | solve [ repeat ssprove_rel_cong_rhs ]
-      ] ;
-      cmd_bind_simpl ; cbn beta
-    | |- _ =>
-      fail "ssprove_code_simpl_more: goal should be syntactic judgment"
-    end.
-
-  Ltac ssprove_rel_cong_debug :=
-    lazymatch goal with
-    | |- ⊢ ⦃ _ ⦄ _ ≈ _ ⦃ _ ⦄ =>
-      eapply rel_jdg_replace_sem ; [
-      | repeat ssprove_rel_cong_rhs
-      | repeat ssprove_rel_cong_rhs
-      ] ;
-      cmd_bind_simpl ; cbn beta
-    | |- _ =>
-      fail "ssprove_code_simpl_more: goal should be syntactic judgment"
-    end.
-
-
   (** We show perfect equivalence in the general case where [b] stay abstract.
     This spares us the burden of proving roughly the same equivalence twice.
   *)
@@ -863,34 +739,7 @@ Section KEMDEM.
     (* We go to the relational logic with our invariant. *)
     eapply eq_rel_perf_ind with (inv := inv). 1: exact _.
     simplify_eq_rel m.
-      1: eapply rel_jdg_replace_sem ; [
-      | repeat ssprove_rel_cong_rhs
-    | (*repeat ssprove_rel_cong_rhs*)
-      ] .
-      2: ssprove_rel_cong_rhs.
-        2: instantiate (1 := assertD _ (sk == None) (λ x', _)).
-        eapply (r_assertD_same A b _ _ (λ x', _)) ; intros x'
-      2: ssprove_rel_cong_rhs.
-      2: ssprove_rel_cong_rhs.
-        2: instantiate (1 := b ← get _ ;; _) .
-        eapply (@rsame_head_getr _ ℓ (λ x', _)) ; intros x'
-      2: ssprove_rel_cong_rhs.
-      2: instantiate (1 := _ ← get _ ;; _).
-      2: eapply (@rsame_head_getr _ sk_loc ) ; intros x'.
-      2: instantiate (1 := _
-      2: eapply (@rsame_head_getr _ _ (λ _, _ )) ; intros x'.
-    1: ssprove_rel_cong.
-      1: change (cmd_bind (cmd_get ?ℓ) ?k) with (getr ℓ k).
-      1: cbn beta.
-      Check cmd_get.
-      1: cmd_bind_simpl; cbn beta.
-    2: ssprove_rel_cong_debug.
-    3: ssprove_simpl.
-    3: instantiate (1 := λ x, #match (Some _) := x ;; _).
-    3: destruct p6.
-        (*instantiate (1 := ltac:(let _ := type of e in destruct e)) ;*)
-        destruct e ; intros
-    3: ssprove_rel_cong_rhs.
+    1-3: ssprove_code_simpl_new.
     (* We are now in the realm of program logic *)
     - ssprove_swap_seq_rhs [:: 1 ; 0 ; 2 ; 1 ]%N.
       apply r_get_vs_get_remember. intro sk.

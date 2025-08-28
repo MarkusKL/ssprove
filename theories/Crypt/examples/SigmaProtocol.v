@@ -444,11 +444,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       ssprove_invariant.
     Qed.
 
-    Hint Extern 50 (_ = code_link _ _) =>
-      rewrite code_link_scheme
-      : ssprove_code_simpl.
-
-
     Theorem commitment_hiding :
       ∀ LA A,
         ValidPackage LA [interface
@@ -490,15 +485,11 @@ Module SigmaProtocol (π : SigmaProtocolParams)
         1: rewrite -> unionmC by fmap_solve.
         1: apply Invariant_inv.
         simplify_eq_rel h.
-        ssprove_code_simpl.
+        ssprove_code_simpl_new.
         destruct h.
-        ssprove_code_simpl.
-        ssprove_code_simpl_more.
         ssprove_sync=>b.
         case (Nat.even b) eqn:Hb ; rewrite Hb.
         + ssprove_sync=> setup.
-          ssprove_code_simpl.
-          ssprove_code_simpl_more.
           apply r_assertD.
           1: done.
           intros _ _.
@@ -508,9 +499,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           intros _ Rel.
           ssprove_swap_seq_lhs [:: 2 ; 1]%N.
           ssprove_contract_put_get_lhs.
-          rewrite Rel.
-          ssprove_code_simpl.
-          ssprove_code_simpl_more.
+          rewrite Rel //=.
           ssprove_sync.
           ssprove_swap_lhs 1%N.
           ssprove_contract_put_get_lhs.
@@ -520,7 +509,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           apply r_put_lhs.
           ssprove_restore_pre.
           1: ssprove_invariant.
-          eapply rsame_head_alt.
+          eapply @rsame_head_alt.
           1: exact _.
           {
             unfold inv.
@@ -544,8 +533,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           apply r_ret.
           done.
         + ssprove_sync=>setup.
-          ssprove_code_simpl.
-          ssprove_code_simpl_more.
           apply r_assertD.
           1: done.
           intros _ _.
@@ -555,9 +542,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           intros _ Rel.
           ssprove_swap_seq_lhs [:: 2 ; 1]%N.
           ssprove_contract_put_get_lhs.
-          rewrite Rel.
-          ssprove_code_simpl.
-          ssprove_code_simpl_more.
+          rewrite Rel //=.
           ssprove_sync.
           ssprove_swap_lhs 1%N.
           ssprove_contract_put_get_lhs.
@@ -567,7 +552,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           apply r_put_lhs.
           ssprove_restore_pre.
           1: ssprove_invariant.
-          eapply rsame_head_alt.
+          eapply @rsame_head_alt.
           1: exact _.
           {
             unfold inv.
@@ -583,9 +568,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
             apply put_pre_cond_heap_ignore.
           }
           intros t.
-          destruct t.
-          destruct s1.
-          destruct s1.
           ssprove_sync.
           ssprove_sync.
           apply r_ret.
@@ -602,14 +584,10 @@ Module SigmaProtocol (π : SigmaProtocolParams)
         3,4: fmap_solve.
         { ssprove_invariant. } (* MK: long exec time *)
         simplify_eq_rel h.
-        ssprove_code_simpl.
+        ssprove_code_simpl_new.
         destruct h.
-        ssprove_code_simpl.
-        ssprove_code_simpl_more.
         ssprove_sync=>e.
         ssprove_sync=> setup.
-        ssprove_code_simpl.
-        ssprove_code_simpl_more.
         apply r_assertD.
         1: done.
         intros _ _.
@@ -619,9 +597,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
         intros _ Rel.
         ssprove_swap_seq_rhs [:: 2 ; 1]%N.
         ssprove_contract_put_get_rhs.
-        rewrite Rel.
-        ssprove_code_simpl.
-        ssprove_code_simpl_more.
+        rewrite Rel //=.
         ssprove_sync.
         ssprove_swap_rhs 1%N.
         ssprove_contract_put_get_rhs.
@@ -631,7 +607,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
         apply r_put_rhs.
         ssprove_restore_pre.
         1: ssprove_invariant.
-        eapply rsame_head_alt.
+        eapply @rsame_head_alt.
         1: exact _.
         {
           unfold inv.
@@ -647,9 +623,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
           apply put_pre_cond_heap_ignore.
         }
         intros t.
-        destruct t.
-        destruct s1.
-        destruct s1.
         ssprove_sync.
         ssprove_sync.
         apply r_ret.
@@ -691,10 +664,8 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       4: apply VA.
       1,2,4,5: ssprove_valid.
       simplify_eq_rel h.
-      ssprove_code_simpl.
-      simpl.
-      destruct h, s0, s1, s1, s2.
-      apply r_ret. auto.
+      ssprove_code_simpl_new.
+      by apply r_ret.
     Qed.
 
   End Commitments.
@@ -862,11 +833,8 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       1,2: ssprove_valid.
       2,3: fmap_solve.
       simplify_eq_rel hw.
-      ssprove_code_simpl.
-      ssprove_code_simpl.
+      ssprove_code_simpl_new.
       destruct hw as [h w].
-      ssprove_code_simpl_more.
-      ssprove_code_simpl.
       ssprove_swap_rhs 0%N.
       ssprove_sync_eq. intro rel.
       ssprove_swap_rhs 0%N.
@@ -875,10 +843,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       apply rsame_head. intro z.
       apply r_ret. intuition auto.
     Qed.
-
-    Hint Extern 50 (_ = code_link _ _) =>
-      rewrite code_link_scheme
-      : ssprove_code_simpl.
 
     (* Adequacy: fiat_shamir is not proven equivalent on the VERIFY call *)
     Theorem fiat_shamir_correct :
@@ -896,11 +860,10 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       3,4: fmap_solve.
       1: rewrite union0m; apply fsubmapUl_trans, fsubmapUr; fmap_solve.
       simplify_eq_rel hw.
+      ssprove_code_simpl_new.
+      2: apply @rreflexivity_rule.
       destruct hw as [h w].
-      ssprove_code_simpl.
-      ssprove_code_simpl_more.
       ssprove_sync. intros rel.
-      ssprove_code_simpl.
       eapply rsame_head_alt.
       1: exact _.
       1:{

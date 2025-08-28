@@ -305,15 +305,37 @@ Definition CCA_EVAL_HYB_pkg:
     }
   ].
 
+Lemma r_match_option_case :
+  forall {A₀ A₁ : choiceType} (e : option A₀) (f₀ f₁ : A₀ -> raw_code A₁) (m₀ m₁ : raw_code A₁) 
+    {pre : precond} {post : postcond A₁ A₁}
+    , (forall a, ⊢ ⦃ pre ⦄ f₀ a ≈ f₁ a ⦃ post ⦄)
+    -> ⊢ ⦃ pre ⦄ m₀ ≈ m₁ ⦃ post ⦄
+    -> ⊢ ⦃ pre ⦄ match e with Some x => f₀ x | None => m₀ end ≈
+                 match e with Some x => f₁ x | None => m₁ end ⦃ post ⦄.
+Proof. by intros ? ? []. Qed.
+
+
+Ltac ssprove_rel_cong_rhs_extra c ::=
+  lazymatch c with
+  | (match ?e with Some x => _ | None => _ end) =>
+    let n := fresh x in
+    instantiate (1 := match _ with Some n => _ | None => _ end) ; (* e not in scope? *)
+    (*instantiate (1 := ltac:(let _ := type of e in destruct e)) ;*)
+    eapply (@r_match_option_case _ _ _ (fun n => _))
+  end.
+
 Lemma CCA_EVAL_equiv_true:
   CCA_EVAL true ≈₀ CCA_EVAL_TAG_pkg_tt ∘ TAG true.
 Proof.
   apply: eq_rel_perf_ind_eq.
   simplify_eq_rel m.
+  all: ssprove_code_simpl_new.
+  2: ssprove_rel_cong_rhs.
+  (*
   all: apply rpost_weaken_rule with eq;
     last by move=> [? ?] [? ?] [].
+   *)
   all: simplify_linking.
-  all: ssprove_code_simpl.
   all: ssprove_code_simpl.
   all: by apply: rreflexivity_rule.
 Qed.

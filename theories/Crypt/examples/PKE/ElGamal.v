@@ -146,7 +146,7 @@ Proof.
     ssprove_invariant.
 
   - apply @r_get_vs_get_remember. 1: exact _. move=> c.
-    ssprove_code_simpl.
+    ssprove_code_simpl_new.
     ssprove_sync => H.
     ssprove_swap_lhs 0%N.
     ssprove_swap_rhs 0%N.
