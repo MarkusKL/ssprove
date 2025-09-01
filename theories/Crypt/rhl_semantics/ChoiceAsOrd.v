@@ -5,6 +5,8 @@ From SSProve.Mon Require Import SPropBase.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
 From SSProve.Crypt Require Import Casts.
 
+From SSProve Require Import discr.
+
 Import SPropNotations.
 
 From HB Require Import structures.
@@ -30,22 +32,10 @@ Section ChoiceAsOrd.
 
 End ChoiceAsOrd.
 
-
-Definition D (T : Type) := T.
-
-HB.instance Definition _ (T : eqType) := gen_eqMixin (D T).
-HB.instance Definition _ (T : choiceType) := gen_choiceMixin (D T).
-HB.instance Definition _ (T : pointedType) := isPointed.Build (D T) point.
-
-HB.instance Definition _ (T : pointedType) := @isMeasurable.Build default_measure_display
-  (D T) discrete_measurable discrete_measurable0
-  discrete_measurableC discrete_measurableU.
-
 Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
     (fun (A:ord_choiceType) => D A)
     (fun (A B : ord_choiceType) f => f)
     _ _ _.
-
 
 Section Prod_of_choiceTypes.
 
