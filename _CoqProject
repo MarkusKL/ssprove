@@ -18,6 +18,7 @@ theories/Relational/OrderEnrichedRelativeMonadExamples.v
 theories/Relational/GenericRulesSimple.v
 theories/Relational/Commutativity.v
 
+theories/Crypt/disc.v
 theories/Crypt/Prelude.v
 theories/Crypt/Axioms.v
 theories/Crypt/jasmin_util.v

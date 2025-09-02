@@ -3,7 +3,7 @@ From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelati
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum.
 Set Warnings "notation-overridden,ambiguous-paths".
-From SSProve.Crypt Require Import ChoiceAsOrd Axioms RelativeMonadMorph_prod FreeProbProg SubDistr choice_type.
+From SSProve.Crypt Require Import disc ChoiceAsOrd Axioms RelativeMonadMorph_prod FreeProbProg SubDistr choice_type.
 
 
 Import SPropNotations.
@@ -84,6 +84,7 @@ Section Unary_effobs.
   Definition commuting_unary_base_square :
   natIso (choice_incl)
          (ord_functor_comp choice_incl (ord_functor_id TypeCat)).
+  Proof.
     unshelve econstructor.
     intro A. intro a. cbv.  assumption.
     intro A. intro a. cbv in a. cbv. assumption.
@@ -93,8 +94,9 @@ Section Unary_effobs.
   Defined.
 
 
-  Definition unary_ThetaDens0 : forall (A:choiceType) (tree : rFreePr A),
+  Definition unary_ThetaDens0 : forall (A:count1Type) (tree : rFreePr A),
   SDistr_carrier A.
+  Proof.
     move=> A. elim=> [a | [X op] /= sbtrs IH].
       apply SDistr_unit. simpl. assumption.
     (*IH: each subtree, indexed by x:chElement X has already produced a SDistr A*)
@@ -107,21 +109,16 @@ Section Unary_effobs.
   Program Definition unary_theta_dens :
   relativeMonadMorphism (ord_functor_id TypeCat) (commuting_unary_base_square)
   (rFreePr) (SDistr) :=
-    mkRelMonMorph (ord_functor_id TypeCat) (commuting_unary_base_square) _ _ _ _ _.
-  Next Obligation.
-    intros A tree. exact (unary_ThetaDens0 A tree).
-  Defined.
+    mkRelMonMorph (ord_functor_id TypeCat) (commuting_unary_base_square) _ _ unary_ThetaDens0 _ _.
   Next Obligation. (*theta of bind = bind of theta basically*)
     intros A B ff.
     apply boolp.funext. intro tree. elim: tree => [a | [relchty op] /= sbtrs IH].
     (*ret is mapped to ret ?*)
-    simpl. pose (toUse := SDistr_leftneutral). apply distr_ext. intro b.
-    rewrite dlet_unit. reflexivity.
-    (*bind is mapped to bind ?*)
-    apply distr_ext. intro b.
-    unfold SDistr_bind. rewrite dlet_dlet. f_equal. f_equal.
-    apply boolp.funext. intro x.  pose (fromIH := IH x).
-    apply fromIH.
+    - rewrite /= /SDistr_bind /SDistr_unit disc_ret_bind //.
+    - rewrite /SDistr_bind.
+      rewrite disc_bind_assoc.
+      f_equal; apply functional_extensionality_dep => x /=.
+      rewrite (IH x) //.
   Qed.
 
 End Unary_effobs.

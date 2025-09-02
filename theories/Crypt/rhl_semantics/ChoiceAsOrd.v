@@ -1,6 +1,6 @@
 From SSProve.Mon Require Import SPropBase.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
-From SSProve.Crypt Require Import Casts.
+From SSProve.Crypt Require Import disc Casts.
 Set Warnings "-notation-overridden".
 From mathcomp Require Import all_ssreflect.
 Set Warnings "notation-overridden".
@@ -18,7 +18,7 @@ Section ChoiceAsOrd.
 
 
   Program Definition ord_choiceType : ord_category :=
-    mkOrdCategory choiceType
+    mkOrdCategory count1Type
                (fun A B => A -> B)
                (fun _ _ f g => forall x, f x =  g x) _
                (fun A a => a)
@@ -37,14 +37,12 @@ Program Definition choice_incl := @mkOrdFunctor ord_choiceType TypeCat
 
 Section Prod_of_choiceTypes.
 
-  Definition F_choice_prod_obj : Obj (prod_cat ord_choiceType ord_choiceType) ->
-                               Obj ord_choiceType.
-  Proof.
-    rewrite /prod_cat /=. move => [C1 C2].
-    exact (C1 * C2)%type.
-  Defined.
+  Definition F_choice_prod_obj :
+    Obj (prod_cat ord_choiceType ord_choiceType) -> Obj ord_choiceType
+    := fun '(npair C1 C2) => (C1 * C2)%type.
 
-  Definition F_choice_prod_morph : forall T1  T2 : (prod_cat ord_choiceType ord_choiceType),
+  Definition F_choice_prod_morph :
+    forall T1 T2 : (prod_cat ord_choiceType ord_choiceType),
       (prod_cat ord_choiceType ord_choiceType) ⦅ T1; T2 ⦆ ->
       ord_choiceType ⦅F_choice_prod_obj T1; F_choice_prod_obj T2 ⦆.
   Proof.
@@ -52,7 +50,8 @@ Section Prod_of_choiceTypes.
     exact (f1 c1, f2 c2).
   Defined.
 
-  Definition F_choice_prod: ord_functor (prod_cat ord_choiceType ord_choiceType) ord_choiceType.
+  Definition F_choice_prod :
+    ord_functor (prod_cat ord_choiceType ord_choiceType) ord_choiceType.
   Proof.
     exists F_choice_prod_obj F_choice_prod_morph.
     - move => [C11 C12] [C21 C22] [s11 s12] [s21 s22] [H1 H2] [x1 x2].

@@ -3,7 +3,7 @@ Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra distr reals realsum.
 Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
-From SSProve.Crypt Require Import ChoiceAsOrd Axioms.
+From SSProve.Crypt Require Import disc ChoiceAsOrd Axioms.
 
 Import Num.Theory.
 Import Order.POrderTheory.
@@ -72,9 +72,8 @@ Section Carrier.
   (*the actual carrier, on poset enriched categories (ord_category
   in the dev) *)
 
-  Program Definition SDistr_carrier (A: ord_choiceType) : TypeCat.
-    exact ({distr A/R}).
-  Defined.
+  Definition SDistr_carrier (A: ord_choiceType) : TypeCat
+    := disc A R.
 
 End Carrier.
 
@@ -82,51 +81,42 @@ End Carrier.
 
 Section Unit.
 
-  Definition SDistr_unit : forall (A:ord_choiceType),
-  TypeCat ⦅ choice_incl A ; SDistr_carrier A ⦆.
-    intro A. intro a. exact (@dunit R A a).
-  Defined.
+  Definition SDistr_unit (A : ord_choiceType) :
+    TypeCat ⦅ choice_incl A ; SDistr_carrier A ⦆
+    := disc_ret.
 
 End Unit.
 
 Section Bind.
 
-  Definition SDistr_bind : forall A B : ord_choiceType,
-  TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆ ->
-  TypeCat ⦅ SDistr_carrier A; SDistr_carrier B ⦆.
-    intros A B. intro ff. simpl in ff.
-    intro mm.
-    exact (@dlet R A B ff mm). (*dlet is the bind operator defined in mathcomp*)
-  Defined.
+  Definition SDistr_bind (A B : ord_choiceType) :
+    TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆ ->
+    TypeCat ⦅ SDistr_carrier A; SDistr_carrier B ⦆
+    := fun ff => disc_bind ^~ ff.
 
 End Bind.
 
 
 Section Relmon_equations.
 
-  Lemma SDistr_rightneutral :
-  forall A : ord_choiceType, SDistr_bind A A (SDistr_unit A) = Id (SDistr_carrier A).
-  Proof.
-    intro A. simpl. eapply boolp.funext. unfold "=1". intro de.
-    apply distr_ext. apply dlet_dunit_id.
-  Qed.
+  Lemma SDistr_rightneutral : forall A : ord_choiceType,
+    SDistr_bind A A (SDistr_unit A) = Id (SDistr_carrier A).
+  Proof. intros A. apply boolp.funext => x. apply disc_bind_ret. Qed.
 
-  Lemma SDistr_leftneutral :
-  forall (A B : ord_choiceType) (f : TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆),
-  SDistr_bind A B f ∙ SDistr_unit A = f.
-    intros A B ff. simpl. simpl in ff.
-    apply boolp.funext. intro de. apply distr_ext.
-    apply dlet_unit.
-  Qed.
+  Lemma SDistr_leftneutral : forall (A B : ord_choiceType)
+    (f : TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆),
+    SDistr_bind A B f ∙ SDistr_unit A = f.
+  Proof. intros A B ff. apply boolp.funext => x. apply disc_ret_bind. Qed.
 
-  Lemma SDistr_assoc :
-  forall (A B C : ord_choiceType) (f : TypeCat ⦅ choice_incl B; SDistr_carrier C ⦆)
+  Lemma SDistr_assoc : forall (A B C : ord_choiceType)
+    (f : TypeCat ⦅ choice_incl B; SDistr_carrier C ⦆)
     (g : TypeCat ⦅ choice_incl A; SDistr_carrier B ⦆),
-  SDistr_bind A C (SDistr_bind B C f ∙ g) = SDistr_bind B C f ∙ SDistr_bind A B g.
+    SDistr_bind A C (SDistr_bind B C f ∙ g)
+      = SDistr_bind B C f ∙ SDistr_bind A B g.
+  Proof.
     intros A B C f g.
-    simpl in f. simpl in g. simpl.
-    apply boolp.funext. intro de. symmetry.
-    apply distr_ext. intro c. simpl. apply dlet_dlet.
+    apply boolp.funext => de.
+    symmetry. apply disc_bind_assoc.
   Qed.
 
 End Relmon_equations.
@@ -136,9 +126,7 @@ Section Ordrelmon_instance.
   (*Here we pack all the above constructs in a ord_relativeMonad instance*)
 
    Program Definition SDistr : ord_relativeMonad choice_incl :=
-   mkOrdRelativeMonad SDistr_carrier  _  _ _ _ _ _.
-   Next Obligation. exact (SDistr_unit). Defined.
-   Next Obligation. exact (SDistr_bind). Defined.
+     mkOrdRelativeMonad SDistr_carrier SDistr_unit SDistr_bind _ _ _ _.
    Next Obligation.
      intros A B. intros f1 f2. intro H. intro a.
      assert (f1 = f2). apply boolp.funext. assumption.

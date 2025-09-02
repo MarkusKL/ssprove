@@ -2,9 +2,9 @@ From SSProve.Mon Require Import FiniteProbabilities SPropMonadicStructures Speci
 From Coq Require Import RelationClasses Morphisms.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples Commutativity.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From mathcomp Require Import all_ssreflect all_algebra reals distr realsum.
+From mathcomp Require Import all_ssreflect all_algebra reals distr realsum classical_sets ereal.
 Set Warnings "notation-overridden,ambiguous-paths".
-From SSProve.Crypt Require Import Axioms ChoiceAsOrd only_prob.SubDistr.
+From SSProve.Crypt Require Import disc Axioms ChoiceAsOrd only_prob.SubDistr.
 
 Import SPropNotations.
 Import Num.Theory.
@@ -45,14 +45,12 @@ Section Coupling_def.
   Context {A1 A2 : ord_choiceType}.
 
   Definition lmg :
-  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A1 )  ⦆.
-    intro d. exact (dfst d).
-  Defined.
+  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A1 )  ⦆
+    := disc_fst.
 
   Definition rmg :
-  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆.
-    intro d. exact (dsnd d).
-  Defined.
+  TypeCat ⦅ SDistr( F_choice_prod (npair A1 A2) ) ; SDistr( A2 )  ⦆
+    := disc_snd.
 
   Definition coupling (d : SDistr( F_choice_prod (npair A1 A2) ) )
   (c1 : SDistr A1) (c2 : SDistr A2) : Prop := (lmg d = c1) /\ (rmg d = c2).
@@ -65,6 +63,7 @@ Section Weight_preservation.
   Context (c1 : SDistr A1) (c2 : SDistr A2).
   Context (hCoupl : coupling d c1 c2).
 
+  (*
   Lemma psum_coupling_left : psum d = psum c1.
   Proof. rewrite (@psum_pair R A1 A2 d).
   f_equal.
@@ -82,12 +81,14 @@ Section Weight_preservation.
   rewrite dsndE. reflexivity.
     destruct d as [dd d2 d3 d4]. simpl. assumption.
   Qed.
+   *)
 
 End Weight_preservation.
 
 Section Weight_of_SDistr_unit.
   Context {A : ord_choiceType} (a : A).
 
+  (*
   Lemma psum_SDistr_unit : psum (SDistr_unit A a) = 1.
   Proof.
   rewrite (@psum_finseq R A (SDistr_unit A a) [::a]).
@@ -106,6 +107,7 @@ Section Weight_of_SDistr_unit.
       contradiction.
       Unshelve. reflexivity.
   Qed.
+   *)
 
 End Weight_of_SDistr_unit.
 
@@ -121,15 +123,13 @@ Section Couplings_vs_ret.
         d = SDistr_unit (F_choice_prod (npair A1 A2)) (a1,a2) ->
         coupling d (SDistr_unit A1 a1) (SDistr_unit A2 a2).
   Proof.
-    intro Hunit. split.
-    - pose (retComm := @dmargin_dunit R (F_choice_prod (npair A1 A2)) A1 (a1,a2) fst).
-      unfold lmg. rewrite Hunit. unfold SDistr_unit. simpl.
-      apply distr_ext. assumption.
-    - pose (retComm := @dmargin_dunit R (F_choice_prod (npair A1 A2)) A2 (a1,a2) snd).
-      unfold rmg. rewrite Hunit. unfold SDistr_unit. simpl.
-      apply distr_ext. assumption.
+    intro Hunit; subst.
+    split.
+    - rewrite /lmg /SDistr_unit disc_fst_ret //.
+    - rewrite /rmg /SDistr_unit disc_snd_ret //.
   Qed.
 
+  (*
   Lemma lmg_SDistr_unit :
   lmg d = SDistr_unit A1 a1 ->
   forall (x1 : A1) (x2 : A2), ~(a1 = x1) -> d(x1,x2) = 0.
@@ -240,9 +240,11 @@ Section Couplings_vs_ret.
     -  intro dCoupl. unshelve eapply coupling_SDistr_unit_F_choice_prod.
        assumption.
   Qed.
+   *)
 
 End Couplings_vs_ret.
 
+(*
 Lemma msupp : forall A1 A2 s s0 (dA : SDistr _), (s, s0) \in dinsupp (T:=F_choice_prod ⟨ A1, A2 ⟩) dA -> 0 < dA (s, s0) = true.
 Proof.
   move=> A1 A2 a1 a2 dA. move=> Hdinsupp. rewrite /in_mem in Hdinsupp.
@@ -252,6 +254,7 @@ Proof.
     move=> Hdinsupp. apply dAz.
   assumption.
 Qed.
+ *)
 
 Section Couplings_vs_bind.
   Context {A1 A2 B1 B2 : ord_choiceType}.
@@ -262,56 +265,24 @@ Section Couplings_vs_bind.
   Context (dA : SDistr ( F_choice_prod (npair A1 A2) ) ) (dA_coup : coupling dA c1 c2).
 
   Context (kd : TypeCat ⦅ choice_incl (F_choice_prod (npair A1 A2)) ; SDistr (F_choice_prod( npair B1 B2)) ⦆)
-          (kd_pcoup : forall (x1 : A1) (x2 : A2), (dA (x1, x2) > 0) = true -> coupling (kd (x1,x2)) (f1 x1) (f2 x2)  ).
+    (kd_pcoup : forall (x1 : A1) (x2 : A2), (disc_ev dA (set1 (x1, x2)) > 0)%E = true -> coupling (kd (x1,x2)) (f1 x1) (f2 x2)).
 
   Lemma coupling_vs_bind :
   coupling (SDistr_bind (F_choice_prod(npair A1 A2)) (F_choice_prod(npair B1 B2)) kd dA)
            (SDistr_bind A1 B1 f1 c1) (SDistr_bind A2 B2 f2 c2).
-  Proof. split.
-         -  unfold lmg.
-            unfold SDistr_bind.
-            unfold dfst.
-            move: dA_coup.
-            rewrite /coupling /lmg.
-            intros [H1 H2].
-            rewrite <- H1.
-            unfold dfst.
-            apply distr_ext. intro b.
-            rewrite (dlet_dlet kd (fun x => dunit x.1) dA).
-            rewrite (dlet_dlet _ _ dA).
-            apply (@eq_in_dlet _ _ _).
-            move => x12 Hsupp b2.
-            destruct x12.
-            simpl. rewrite (dlet_unit).
-            assert (0 < dA (s, s0) = true).
-            apply msupp. assumption.
-            specialize (kd_pcoup s s0 H).
-            unfold coupling in kd_pcoup. destruct kd_pcoup.
-            unfold lmg in H0. unfold dfst in H0.
-            rewrite H0. reflexivity.
-            intro x. reflexivity.
-         -  unfold rmg.
-            unfold SDistr_bind.
-            unfold dfst.
-            move: dA_coup.
-            rewrite /coupling /lmg.
-            intros [H1 H2].
-            rewrite <- H2.
-            unfold dfst.
-            apply distr_ext. intro b.
-            rewrite (dlet_dlet kd (fun x => dunit x.2) dA).
-            rewrite (dlet_dlet _ _ dA).
-            apply (@eq_in_dlet _ _ _).
-            move => x12 Hsupp b2.
-            destruct x12.
-            simpl. rewrite (dlet_unit).
-            assert (0 < dA (s, s0) = true).
-            apply msupp. assumption.
-            specialize (kd_pcoup s s0 H).
-            unfold coupling in kd_pcoup. destruct kd_pcoup.
-            unfold rmg in H3. unfold dfst in H3.
-            rewrite H3. reflexivity.
-            intro x. reflexivity.
+  Proof.
+    split.
+    - rewrite -(fst dA_coup).
+      rewrite /lmg /SDistr_bind.
+      apply (disc_fst_bind _ (k := kd)).
+      intros [x y] => /=.
+      eapply (fst (kd_pcoup _ _ _)).
+    - rewrite -(snd dA_coup).
+      rewrite /rmg /SDistr_bind.
+      apply (disc_snd_bind _ (k := kd)).
+      intros [x y] => /=.
+      eapply (snd (kd_pcoup _ _ _)).
+  Unshelve.
 Qed.
 
 End Couplings_vs_bind.

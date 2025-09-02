@@ -1,9 +1,9 @@
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From mathcomp Require Import all_ssreflect all_algebra boolp distr reals realsum.
+From mathcomp Require Import all_ssreflect all_algebra boolp distr reals realsum ereal classical_sets.
 Set Warnings "notation-overridden,ambiguous-paths".
 From SSProve.Mon Require Import SpecificationMonads SPropBase SPropMonadicStructures.
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
-From SSProve.Crypt Require Import ChoiceAsOrd SubDistr Couplings Axioms Casts.
+From SSProve.Crypt Require Import disc ChoiceAsOrd SubDistr Couplings Axioms Casts.
 From HB Require Import structures.
 
 Import SPropNotations.
@@ -56,7 +56,7 @@ Definition v : forall C : (prod_cat ord_choiceType ord_choiceType),
     OrdCat ⦅ (ord_functor_comp (F_choice_prod) chDiscr) C ;
      (ord_functor_comp (prod_functor choice_incl choice_incl) Jprod) C ⦆.
 Proof.
-  move => [[C1 ch1] [C2 ch2]] /=.
+  move => [C1 C2] /=.
   eexists (v0 C1 C2).
   move => [x11 x12] [x21 x22] x1_x2.
   destruct x1_x2. by constructor.
@@ -71,7 +71,7 @@ Definition v_inv : forall C : (prod_cat ord_choiceType ord_choiceType),
     OrdCat ⦅ (ord_functor_comp (prod_functor choice_incl choice_incl) Jprod) C;
       (ord_functor_comp (F_choice_prod) chDiscr) C ⦆.
 Proof.
-  move => [[C1 ch1] [C2 ch2]] /=.
+  move => [C1 C2] /=.
   eexists (v_inv0 C1 C2).
   move => [x11 x12] [x21 x22] x1_x2.
   by destruct x1_x2.
@@ -82,76 +82,81 @@ Definition ϕ : natIso (ord_functor_comp (F_choice_prod) chDiscr)
                                           Jprod).
 Proof.
   exists v v_inv.
-  - move =>  [[C11 ch11] [C12 ch12]] [[C21 ch21] [C22 ch22]] /= [f1 f2].
+  - move =>  [C11 C12] [C21 C22] /= [f1 f2].
     apply: sig_eq. rewrite /=.
     apply: boolp.funext. by move => [c1 c2] /=.
-  - move => [[C1 ch1] [C2 ch2]] /=.
+  - move => [C1 C2] /=.
     by apply: sig_eq.
-  - move => [[C1 ch1] [C2 ch2]] /=.
+  - move => [C1 C2] /=.
     apply: sig_eq. rewrite /=.
     apply: boolp.funext. by move => [c1 c2] /=.
 Defined.
 
-Definition θ0 (A1 A2 : Type) (ch1 : Choice A1) (ch2 : Choice A2):
-  (SDistr_carrier (Choice.Pack ch1)) × (SDistr_carrier (Choice.Pack ch2)) ->
+Definition θ0 (A1 A2 : count1Type) :
+  (SDistr_carrier A1) × (SDistr_carrier A2) ->
   WProp (A1 * A2)%type.
 Proof.
   rewrite /SDistr_carrier. move => [d1 d2].
   exists (fun π : A1 * A2 -> Prop => (exists d, (coupling d d1 d2)
                                      /\
-                                    (forall (a1 : A1) (a2 : A2), (d (a1, a2)) > 0 -> π (a1, a2)))).
+                                     (forall (a1 : A1) (a2 : A2), (disc_ev d (set1 (a1, a2)) > 0)%E -> π (a1, a2)))).
   move => π1 π2 leq12 [d [marg_d integral]].
   exists d. split.
   - assumption.
-  - move => a1 a2 d_eq_0. apply: leq12. by apply: integral.
+  - move => a1 a2 leq. apply: leq12. by apply: integral.
 Defined.
 
 Definition θ : forall A : prod_cat ord_choiceType ord_choiceType,
     OrdCat ⦅ Jprod (SDistr_squ A); WRelProp A ⦆.
 Proof.
-  move => [[A1 ch1] [A2 ch2]] /=.
-  exists (θ0 A1 A2 ch1 ch2).
+  move => [A1 A2] /=.
+  exists (θ0 A1 A2).
   move => [d11 d12] [d21 d22] leq12 π /=.
   inversion leq12. by subst.
 Defined.
 
-Definition kd {A1 A2 B1 B2 : Type} {chA1 : Choice A1} {chA2 : Choice A2}
-                                   {chB1 : Choice B1} {chB2 : Choice B2}
+Definition kd {A1 A2 B1 B2 : count1Type} 
               {f1 : TypeCat ⦅ nfst (prod_functor choice_incl choice_incl ⟨
-                               Choice.Pack chA1, Choice.Pack chA2 ⟩);
-                              nfst (SDistr_squ ⟨Choice.Pack chB1, Choice.Pack chB2 ⟩) ⦆}
+                               A1 , A2 ⟩);
+                              nfst (SDistr_squ ⟨ B1, B2 ⟩) ⦆}
               {f2 :  TypeCat ⦅ nsnd (prod_functor choice_incl choice_incl ⟨
-                         Choice.Pack chA1, Choice.Pack chA2 ⟩);
-                               nsnd (SDistr_squ ⟨ Choice.Pack chB1, Choice.Pack chB2 ⟩) ⦆}
+                         A1, A2 ⟩);
+                               nsnd (SDistr_squ ⟨ B1, B2 ⟩) ⦆}
               {π : B1 * B2 -> Prop}
-                 (dA : SDistr_carrier (F_choice_prod_obj ⟨ Choice.Pack chA1,
-                                                                     Choice.Pack chA2 ⟩))
+                 (dA : SDistr_carrier (F_choice_prod_obj ⟨ A1,
+                                                                     A2 ⟩))
              (integral : forall (a1 : A1) (a2 : A2),
-                         (0 < dA (a1, a2)) ->
+                         (*(0 < dA (a1, a2)) ->*)
                          exists d : SDistr_carrier (F_choice_prod_obj
-                                                  ⟨ Choice.Pack chB1, Choice.Pack chB2 ⟩),
+                                                  ⟨ B1, B2 ⟩),
                               (coupling d (f1 a1) (f2 a2))
-                                        /\ (forall (a3 : B1) (a4 : B2), 0 < d (a3, a4) -> (π (a3, a4)))) :
-  { kd : A1 * A2 -> SDistr (F_choice_prod ⟨ Choice.Pack chB1, Choice.Pack chB2 ⟩) |
-    (forall (x1 : A1 * A2), (dA x1 > 0) = true -> coupling (kd x1) (f1 (fst x1)) (f2 (snd x1)) /\ forall (a3 : B1) (a4 : B2), 0 < kd x1 (a3, a4) -> (π (a3, a4))) }.
+                              /\ (forall (a3 : B1) (a4 : B2), (*0 < d (a3, a4) ->*) (π (a3, a4)))) :
+  { kd : A1 * A2 -> SDistr (F_choice_prod ⟨ B1, B2 ⟩) |
+      (forall (x1 : A1 * A2), (*(dA x1 > 0) = true ->*) coupling (kd x1) (f1 (fst x1)) (f2 (snd x1)) /\ forall (a3 : B1) (a4 : B2), (*0 < kd x1 (a3, a4) ->*) (π (a3, a4))) }.
 Proof.
-  apply (@schoice (A1 * A2) (SDistr (F_choice_prod ⟨ Choice.Pack chB1, Choice.Pack chB2 ⟩))
-                  (fun a b => (0 < dA _) = true -> (coupling b _ _) /\ (forall (a3 : B1) (a4 : B2), 0 < b (a3, a4) -> π (a3, a4)))).
+  apply (@schoice (A1 * A2) (SDistr (F_choice_prod ⟨ B1, B2 ⟩))
+  (fun a b => (*(0 < dA _) = true ->*) (coupling b _ _) /\ (forall (a3 : B1) (a4 : B2), (*0 < b (a3, a4) ->*) π (a3, a4)))).
   move => [a1 a2].
-  destruct (0 < dA (a1, a2)) eqn: K.
-  - move: (integral a1 a2 K) => H.
-    (* apply Prop2SProp_truthMorphism_rightLeft. *)
-    simpl. move: H=> [x s]. move: s=> [p π0].
-    (* apply SProp2Prop_truthMorphism_rightLeft. *)
-    (* rewrite PSP_retr. *)
-    exists x. intro. split. assumption.
-    + intros. specialize (π0 a3 a4 H0). (* apply Prop2SProp_truthMorphism_rightLeft. *)
-      (* rewrite PSP_sect. *) assumption.
-  - exists dnull. intro. inversion H.
+  move: (integral a1 a2) => [x s].
+  exists x => /=. apply s.
 Defined.
 
-Lemma extract_positive : forall {A1 A2 B1 B2 : Type} {chA1 : Choice A1} {chA2 : Choice A2} {chB1 : Choice B1} {chB2 : Choice B2}  (dA : SDistr_carrier (F_choice_prod_obj ⟨ Choice.Pack chA1, Choice.Pack chA2 ⟩)) (FF1 : _ -> SDistr (F_choice_prod ⟨ Choice.Pack chB1, Choice.Pack chB2 ⟩)) b1 b2, 0 < (\dlet_(i <- dA) (FF1 i)) (b1, b2) -> exists (a1 : Choice.Pack chA1) (a2 : Choice.Pack chA2), 0 < dA (a1, a2) /\ 0 < FF1 (a1, a2) (b1, b2).
+Lemma extract_positive :
+  forall {A1 A2 B1 B2 : count1Type}
+    (dA : SDistr_carrier (F_choice_prod_obj ⟨ A1, A2 ⟩))
+    (FF1 : _ -> SDistr (F_choice_prod ⟨ B1, B2 ⟩)) b1 b2,
+    (0 < disc_ev (disc_bind dA FF1) [set (b1, b2)]%classic)%E ->
+    exists (a1 : A1) (a2 : A2), (0 < disc_ev dA [set (a1, a2)]%classic)%E
+      /\ (0 < disc_ev (FF1 (a1, a2)) [set (b1, b2)]%classic)%E.
 Proof.
+  intros A1 A2 B1 B2 dA FF1 b1 b2 H.
+Admitted.
+  (*
+  eexists.
+  eexists.
+
+
+
   intuition. rewrite /(\dlet_(i <- _) _) in H. unlock in H. simpl in H.
   rewrite /mlet in H.
   rewrite lt0r in H. move: H=> /andP [H1 H2].
@@ -172,13 +177,17 @@ Proof.
     rewrite GRing.mulr0 //=.
     apply FF1z.
 Qed.
+   *)
 
-Lemma distr_get : forall {A : Type} {chA : Choice A} x y, 0 < SDistr_unit (Choice.Pack chA) x y -> x = y.
+Lemma distr_get : forall {A : count1Type} x y, (@disc_ev A R (disc_ret x) [set y] > 0)%E -> x = y.
 Proof.
-  intuition. rewrite /SDistr_unit in H. rewrite dunit1E in H.
-  case Hxy: (x==y).
-    move: Hxy => /eqP Hxy //=.
-  rewrite Hxy /= in H. rewrite (ltxx 0) in H. discriminate.
+  intros A x y.
+  rewrite /disc_ret /= measure.diracE.
+  destruct (x \in [set y]%classic) eqn:E; rewrite E.
+  - apply set_mem in E.
+    done.
+  - simpl; intros s.
+    rewrite lte_fin ltxx // in s.
 Qed.
 
 Import OrderEnrichedRelativeMonadExamplesNotation.
@@ -195,19 +204,19 @@ Definition θ_morph : relativeLaxMonadMorphism
                                WRelProp (* ord_relativeMonad J2*).
 Proof.
   exists θ.
-  - move => [[C1 ch1] [C2 ch2]].
-    simpl. rewrite /SubDistr.SDistr_obligation_1 /SDistr_unit.
+  - move => [C1 C2].
+    simpl. rewrite /SDistr_unit.
     unfold "≤". rewrite /= /MonoCont_order /v_inv0 /=.
     move => [c1 c2] π π_x.
     simpl.
-    exists (SDistr_unit (F_choice_prod ⟨ Choice.Pack ch1, Choice.Pack ch2 ⟩) (c1, c2)).
+    exists (SDistr_unit (F_choice_prod ⟨ C1 , C2 ⟩) (c1, c2)).
     split.
     + (* apply: Prop2SProp_truthMorphism_leftRight. *)
-        by rewrite -coupling_vs_ret.
+      by apply SDistr_unit_F_choice_prod_coupling.
     + move => a1 a2 geq0.
       apply distr_get in geq0.
       by rewrite -geq0.
-  - move => [[A1 chA1] [A2 chA2]] [[B1 chB1] [B2 chB2]] [f1 f2] [c1 c2] /=.
+  - move => [A1 A2] [B1 B2] [f1 f2] [c1 c2] /=.
     unfold "≤". rewrite /= /MonoCont_order /v_inv0 /=.
     move => π  [dA [coupling_SProp integral]] /=.
     move: coupling_SProp => coupling_Prop.

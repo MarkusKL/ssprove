@@ -2,7 +2,7 @@ Set Warnings "-notation-overridden".
 From mathcomp Require Import all_ssreflect boolp.
 Set Warnings "notation-overridden".
 From SSProve.Relational Require Import OrderEnrichedCategory OrderEnrichedRelativeMonadExamples.
-From SSProve.Crypt Require Import ChoiceAsOrd choice_type.
+From SSProve.Crypt Require Import disc ChoiceAsOrd choice_type.
 From SSProve.Crypt Require Import SubDistr.
 
 
@@ -75,16 +75,16 @@ Section RelativeFreeMonad.
 
   (* A signature where S is the type of operations and P describes the
      arity of each operations *)
-  Context (S : Type) (P : S  -> choiceType).
+  Context (S : Type) (P : S  -> count1Type).
 
 
-  Inductive rFreeF (A : choiceType) : Type :=
+  Inductive rFreeF (A : count1Type) : Type :=
   | retrFree : A -> rFreeF A
   | ropr     : forall s, (P s -> rFreeF A) -> rFreeF A.
 
   Arguments ropr [A] _ _.
 
-  Fixpoint bindrFree {A B : choiceType} (c : rFreeF A)
+  Fixpoint bindrFree {A B : count1Type} (c : rFreeF A)
   (k : TypeCat ⦅ choice_incl A ; rFreeF B ⦆ )
   : rFreeF B :=
     match c with
@@ -96,11 +96,8 @@ Section RelativeFreeMonad.
 
 
   Program Definition rFree : ord_relativeMonad choice_incl :=
-    @mkOrdRelativeMonad ord_choiceType TypeCat choice_incl rFreeF _ _ _ _ _ _.
-  Next Obligation. constructor. assumption. Defined.
-  Next Obligation.
-    intros A B. intros ff mm. exact (bindrFree mm ff).
-  Defined.
+    @mkOrdRelativeMonad ord_choiceType TypeCat choice_incl
+      rFreeF retrFree (fun _ _ x => bindrFree ^~ x) _ _ _ _.
   Next Obligation.
     cbv ; intuition. f_equal. apply funext. move=> a. eapply H.
   Qed.
