@@ -1,5 +1,9 @@
 {
-  "image": "ghcr.io/devcontainers-extra/features/ocaml-opam:1",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/ocaml-opam": {
+      "version": "1"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
