@@ -1,9 +1,5 @@
 {
-  "features": {
-    "ghcr.io/devcontainers-extra/features/ocaml-opam": {
-      "version": "1"
-    }
-  },
+  "build": { "dockerfile": "../Dockerfile" },
   "customizations": {
     "vscode": {
       "extensions": [
