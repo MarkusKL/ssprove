@@ -6,4 +6,5 @@ RUN echo 'trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16Z
 
 COPY shell.nix default.nix /mnt/
 COPY .nix/ /mnt/.nix/
+WORKDIR /mnt
 RUN nix-shell
