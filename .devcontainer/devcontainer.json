@@ -6,10 +6,10 @@
     }
   },
   "customizations": {
-    "settings": {
-      "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix"
-    },
     "vscode": {
+      "settings": {
+        "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix"
+      },
       "extensions": [
         "arrterian.nix-env-selector",
         "ejgallego.coq-lsp"
