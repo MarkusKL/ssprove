@@ -1,6 +1,6 @@
 {
   "name": "ssprove-devcontainer",
-  "build": "../Dockerfile",
+  "build": { "dockerfile": "../Dockerfile" },
   "onCreateCommand": "nix-shell --command 'echo done building nix dev environment'",
 
   "customizations": {
