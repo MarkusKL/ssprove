@@ -1,4 +1,4 @@
-FROM nixos/nix
+FROM ghcr.io/xtruder/nix-devcontainer:v1
 RUN mkdir -p ~/.config/nix
 RUN echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 RUN echo 'substituters = https://cache.nixos.org https://coq.cachix.org https://coq-community.cachix.org https://math-comp.cachix.org' >> ~/.config/nix/nix.conf
