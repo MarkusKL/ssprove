@@ -1,4 +1,5 @@
 {
+  "name": "ssprove-devcontainer",
   "image": "ghcr.io/xtruder/nix-devcontainer:v1",
   "runArgs": [
     "--security-opt", "label=disable"
