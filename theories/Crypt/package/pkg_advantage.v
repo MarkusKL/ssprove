@@ -15,7 +15,7 @@ From SSProve.Crypt Require Import Prelude Axioms ChoiceAsOrd SubDistr
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-Import Num.Theory.
+Import GRing.Theory Num.Theory.
 
 Set Equations With UIP.
 Set Equations Transparent.
@@ -412,7 +412,7 @@ Ltac advantage_sum_simpl_in h :=
 Ltac ssprove_triangle_as p₀ l p₁ A ineq :=
   pose proof (Advantage_triangle_chain p₀ l p₁ A) as ineq ;
   advantage_sum_simpl_in ineq ;
-  rewrite ?ssralg.GRing.addrA in ineq.
+  rewrite ?addrA in ineq.
 
 Tactic Notation
   "ssprove" "triangle" constr(p₀) constr(l) constr(p₁) constr(A)
