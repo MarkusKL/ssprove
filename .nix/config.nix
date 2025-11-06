@@ -65,8 +65,6 @@
       mathcomp.job = false;
       mathcomp.override.version = "2.4.0";
       mathcomp-analysis.override.version = "1.12.0";
-      equations.override.version = "14e30556e2c6d0c34aefee9fe27e89b7956fd20b";
-      equations.job = false;
     }; rocqPackages = {
       rocq-core.override.version = "9.1";
     };
