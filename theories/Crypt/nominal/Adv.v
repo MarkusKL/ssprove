@@ -36,10 +36,8 @@ From Coq Require Import Btauto.
 Import PackageNotation.
 
 
-Definition Pr' : nom_package → R := λ P, Pr P true.
-
 Definition Adv (G G' A : nom_package) : R
-  := `| Pr' (A ∘ G) - Pr' (A ∘ G') |.
+  := `| Pr (A ∘ G)%sep true - Pr (A ∘ G')%sep true |.
 
 Add Parametric Morphism : val with
   signature alpha ==> alpha as val_mor.
@@ -50,29 +48,13 @@ Proof.
   reflexivity.
 Qed.
 
-Add Parametric Morphism : Pr' with
-  signature alpha ==> eq as Pr'_mor.
-Proof.
-  intros x y [π' H0].
-  unfold Pr'.
-  rewrite -H0.
-  apply Pr_rename.
-Qed.
-
-Lemma Pr'_def {P} : Pr' P = Pr (val P) true.
-Proof. done. Qed.
-
 Add Parametric Morphism : Adv with
   signature alpha ==> alpha ==> alpha ==> eq as Adv_mor.
-Proof.
-  intros.
-  unfold Adv.
-  rewrite H H0 H1 //.
-Qed.
+Proof. intros. rewrite /Adv H H0 H1 //. Qed.
 
 Lemma Adv_triangle {G1 G2 G3 : nom_package} A
   : Adv G1 G3 A <= Adv G1 G2 A + Adv G2 G3 A.
-Proof. unfold Adv, Pr'. apply Advantage_triangle. Qed.
+Proof. apply Advantage_triangle. Qed.
 
 Lemma Adv_same (G A : nom_package) : Adv G G A = 0.
 Proof. rewrite /Adv addrN. rewrite normr0 //. Qed.

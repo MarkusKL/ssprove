@@ -57,16 +57,11 @@ Definition Game_import_P : Game_op_import_S → choiceType :=
   λ v, let 'existT a b := v in match b with end.
 
 Definition Pr_code {A} (p : raw_code A) :
-  heap_choiceType → SDistr (F_choice_prod_obj ⟨ A , heap_choiceType ⟩) :=
+  heap → SDistr (F_choice_prod_obj ⟨ A , heap : choiceType ⟩) :=
   λ s, thetaFstd A (repr p) s.
 
-(* TODO REMOVE? *)
-Definition Pr_raw_func_code {A B} (p : A → raw_code B) :
-  A → heap_choiceType → SDistr (F_choice_prod_obj ⟨ B , heap_choiceType ⟩) :=
-  λ a s, Pr_code (p a) s.
-
 Definition Pr_op (p : raw_package) (o : opsig) (x : src o) :
-  heap_choiceType → SDistr (F_choice_prod_obj ⟨ tgt o , heap_choiceType ⟩) :=
+  heap → SDistr (F_choice_prod_obj ⟨ tgt o , heap : choiceType ⟩) :=
   Pr_code (resolve p o x).
 
 Arguments SDistr_bind {_ _}.
@@ -83,131 +78,6 @@ Definition Advantage (G : bool → raw_package) (A : raw_package) : R :=
 Definition AdvantageE (G₀ G₁ : raw_package) (A : raw_package) : R :=
   `| Pr (A ∘ G₀) true - Pr (A ∘ G₁) true |.
 
-(* TODO We could have the following
-  Not clear it would be an improvement. It would be shorter but maybe not
-  as easy to work with.
-*)
-
-(* Record AdversaryFor {I} (G : loc_GamePair I) := mkAdversary {
-  adv_pack : loc_package I A_export ;
-  adv_disj_false : fdisjoint adv_pack.(locs) (G false).(locs) ;
-  adv_disj_true : fdisjoint adv_pack.(locs) (G true).(locs)
-}.
-
-Coercion adv_pack : AdversaryFor >-> loc_package. *)
-
-(* TODO Update to the new setting *)
-(* Lemma pr_weak {Game_export : Interface}
-  (A : Adversary4Game Game_export) (G : loc_package _ _) :
-  Pr {locpackage link (turn_adversary_weak A) G } true =
-  Pr {locpackage link A G } true.
-Proof.
-Admitted. *)
-
-(* TODO UPDATE, first figure out what its role is *)
-(* Definition perf_ind {Game_export : Interface}
-  (G0 : Game_Type Game_export) (G1 : Game_Type Game_export) :=
-  ∀ A,
-    fdisjoint A.(locs) G0.(locs) →
-    fdisjoint A.(locs) G1.(locs) →
-    AdvantageE G0 G1 A = 0. *)
-
-(* TODO UPDATE *)
-(* Definition perf_ind_weak {Game_export : Interface}
-  (G0 : Game_Type Game_export) (G1 : Game_Type Game_export) :=
-  ∀ A, AdvantageE_weak G0 G1 A = 0. *)
-
-(* Definition perf_ind_weak_implies_perf_ind {Game_export : Interface}
-  (G0 : Game_Type Game_export) (G1 : Game_Type Game_export)
-  (h : perf_ind_weak G0 G1) : perf_ind G0 G1.
-Proof.
-  unfold perf_ind, perf_ind_weak, AdvantageE, AdvantageE_weak in *.
-  intros A H1 H2.
-  rewrite -(pr_weak A G0).
-  rewrite -(pr_weak A G1).
-  apply h.
-Qed. *)
-
-(* Notation "ε( GP )" :=
-  (AdvantageE (GP false) (GP true))
-  (at level 90)
-  : package_scope. *)
-
-Definition state_pass_ {A} (p : raw_code A) :
-  heap_choiceType → raw_code (prod A heap_choiceType).
-Proof.
-  induction p; intros h.
-  - constructor.
-    exact (x, h).
-  - apply (opr o).
-    + exact x.
-    + intros v. exact (X v h).
-  - apply X.
-    + exact (get_heap h l).
-    + exact h.
-  - apply IHp.
-    apply (set_heap h l v).
-  - apply (sampler op).
-    intros v. exact (X v h).
-Defined.
-
-Definition state_pass__valid {A} {L} {I} (p : raw_code A)
-  (h : ValidCode L I p) :
-  ∀ hp, ValidCode emptym I (state_pass_ p hp).
-Proof.
-  intro hp.
-  unfold ValidCode in *.
-  induction h in hp |- *.
-  - cbn. constructor.
-  - simpl. constructor.
-    + assumption.
-    + intros t. eauto.
-  - simpl. eauto.
-  - simpl. eauto.
-  - simpl. constructor.
-    intros v. eauto.
-Qed.
-
-Definition state_pass {A} (p : raw_code A) : raw_code A :=
-  bind (state_pass_ p empty_heap) (λ '(r, _), ret r).
-
-Definition state_pass_valid {A} {L} {I} (p : raw_code A)
-  (h : ValidCode L I p) :
-  ValidCode emptym I (state_pass p).
-Proof.
-  apply valid_bind.
-  - apply (state_pass__valid p h empty_heap).
-  - intros x. destruct x. constructor.
-Qed.
-
-(* MK: To be solved by nominals.
-(* TODO Will have to be updated *)
-(* Probably by having first an operation on raw_packages
-  and then a validity proof.
-*)
-Definition turn_adversary_weak  {Game_export : Interface}
-  (A : Adversary4Game Game_export) : Adversary4Game_weak Game_export.
-Proof.
-  unfold Adversary4Game_weak.
-  pose (get_op A RUN RUN_in_A_export tt) as run.
-  destruct run as [run valid_run].
-  cbn in *.
-  pose (state_pass run) as raw_run_st.
-  pose (state_pass_valid run valid_run) as raw_run_st_valid.
-  apply funmkpack.
-  - unfold flat, A_export.
-    intros n u1 u2.
-    move /fset1P => h1.
-    move /fset1P => h2.
-    inversion h1. inversion h2.
-    reflexivity.
-  - intros o.
-    move /fset1P => hin.
-    subst. intros _.
-    exists raw_run_st.
-    assumption.
-Defined.
-*)
 
 Definition adv_equiv {L₀ L₁ E} (G₀ G₁ : raw_package)
   `{ValidPackage L₀ Game_import E G₀} `{ValidPackage L₁ Game_import E G₁} ε :=
