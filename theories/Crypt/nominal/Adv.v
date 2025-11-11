@@ -35,22 +35,22 @@ From Coq Require Import Btauto.
 
 Import PackageNotation.
 
+Definition Pr' (P : nom_package) := Pr (val P).
 
 Definition Adv (G G' A : nom_package) : R
-  := `| Pr (A ∘ G)%sep true - Pr (A ∘ G')%sep true |.
+  := `| Pr' (A ∘ G)%sep true - Pr' (A ∘ G')%sep true |.
 
 Add Parametric Morphism : val with
   signature alpha ==> alpha as val_mor.
-Proof.
-  intros x y [π E].
-  rewrite -E.
-  exists π.
-  reflexivity.
-Qed.
+Proof. intros x y [π E]. rewrite -E. by exists π. Qed.
+
+Add Parametric Morphism : Pr' with
+  signature alpha ==> eq as Pr'_mor.
+Proof. intros x y E. by apply Pr_mor, val_mor. Qed.
 
 Add Parametric Morphism : Adv with
   signature alpha ==> alpha ==> alpha ==> eq as Adv_mor.
-Proof. intros. rewrite /Adv H H0 H1 //. Qed.
+Proof. intros ? ? E1 ? ? E2 ? ? E3. by rewrite /Adv E1 E2 E3. Qed.
 
 Lemma Adv_triangle {G1 G2 G3 : nom_package} A
   : Adv G1 G3 A <= Adv G1 G2 A + Adv G2 G3 A.
