@@ -24,26 +24,32 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Definition coerce_kleisli {A A' B B' : choice_type} (f : A → raw_code B) : A' → raw_code B'
-  := locked (λ a, bind (f (coerce a)) (λ b, ret (coerce b))).
+Definition coerce_code {A B : choice_type} : A → raw_code B
+  := λ a, odflt (sampler (B; distr.dnull) (@ret _)) (omap (@ret _) (coerce a)).
+
+Definition coerce_kleisli {A A' B B' : choice_type} (f : A → raw_code B)
+  : A' → raw_code B'
+  := locked (λ a, bind (coerce_code a) (λ a, bind (f a) coerce_code)).
 
 Lemma coerce_kleisliE {A B} f : @coerce_kleisli A A B B f = f.
 Proof.
   extensionality a.
-  rewrite /coerce_kleisli -lock coerceE.
+  rewrite /coerce_kleisli -lock /coerce_code coerceE /=.
   rewrite -{2}(bind_ret _ (f a)).
   f_equal; apply functional_extensionality => b.
   rewrite coerceE //.
 Qed.
 
-Definition resolve (p : raw_package) (o : opsig) (x : src o) : (raw_code (tgt o)) :=
+Definition resolve (p : raw_package) (o : opsig) (x : src o)
+  : (raw_code (tgt o)) :=
   match p o.1 with
   | Some (_; _; f) => coerce_kleisli f x
-  | None => ret (chCanonical _)
+  | None => sampler (_; distr.dnull) (@ret _)
   end.
 
 Lemma resolve_set p id F o
-  : resolve (setm p id F) o = if o.1 == id then coerce_kleisli F.π2.π2 else resolve p o.
+  : resolve (setm p id F) o
+  = if o.1 == id then coerce_kleisli F.π2.π2 else resolve p o.
 Proof.
   rewrite /resolve setmE.
   extensionality x.
@@ -71,8 +77,6 @@ Fixpoint code_link {A} (v : raw_code A) (p : raw_package) :
   match v with
   | ret a => ret a
   | opr o a k => bind (resolve p o a) (λ b, code_link (k b) p)
-    (* The None branch of resolve doesn't happen when valid *)
-    (* We continue with a default value to preserve associativity. *)
   | getr l k => getr l (λ x, code_link (k x) p)
   | putr l v k => putr l v (code_link k p)
   | sampler op k => sampler op (λ x, code_link (k x) p)
@@ -193,7 +197,15 @@ Lemma resolve_link f g o x :
 Proof.
   rewrite /resolve mapmE.
   destruct (f o.1) as [[S [T h]]|] => //=.
-  rewrite /coerce_kleisli -2!lock code_link_bind //.
+  rewrite /coerce_kleisli -2!lock /coerce_code code_link_bind //.
+  destruct (coerce x) eqn:E => //=.
+  - rewrite code_link_bind.
+    f_equal. extensionality b.
+    destruct (coerce b) eqn:E' => //=.
+  - f_equal. extensionality a.
+    rewrite code_link_bind.
+    f_equal. extensionality b.
+    destruct (coerce b) eqn:E' => //=.
 Qed.
 
 Lemma code_link_assoc :

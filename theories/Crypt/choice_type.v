@@ -139,8 +139,8 @@ Definition pos0 {n} `{H : Positive n} : chFin (mkpos n) := Ordinal H.
   | chSum A B => inl (chCanonical A)
   end.
 
-Definition coerce {A B : choice_type} : A → B
-  := λ x, odflt (chCanonical B) (unpickle (pickle x)).
+Definition coerce {A B : choice_type} : A → option B
+  := λ x, unpickle (pickle x).
 
-Lemma coerceE {A : choice_type} (a : A) : coerce a = a.
+Lemma coerceE {A : choice_type} (a : A) : coerce a = Some a.
 Proof. rewrite /coerce pickleK //. Qed.

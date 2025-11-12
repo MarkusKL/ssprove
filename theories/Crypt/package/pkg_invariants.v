@@ -744,11 +744,17 @@ Proof.
     split. all: split. all: auto.
 Qed.
 
+Definition coerce_loc {A : choice_type} (l : Location) (v : A)
+  := odflt (heap_init l) (coerce v).
+
+Lemma coerce_locE (l : Location) (a : l) : coerce_loc l a = a.
+Proof. rewrite /coerce_loc coerceE //. Qed.
+
 Fixpoint lookup_hpv_l (l : Location) (lv : seq heap_val) : option l :=
   match lv with
   | [::] => None
   | (hpv_l l' v :: lv) =>
-      if l.1 == l'.1 then Some (coerce v) else lookup_hpv_l l lv
+      if l.1 == l'.1 then Some (coerce_loc l v) else lookup_hpv_l l lv
   | (hpv_r _ _ :: lv) => lookup_hpv_l l lv
   end.
 
@@ -757,7 +763,7 @@ Fixpoint lookup_hpv_r (l : Location) (lv : seq heap_val) : option l :=
   | [::] => None
   | (hpv_l _ _ :: lv) => lookup_hpv_r l lv
   | (hpv_r l' v :: lv) =>
-      if l.1 == l'.1 then Some (coerce v) else lookup_hpv_r l lv
+      if l.1 == l'.1 then Some (coerce_loc l v) else lookup_hpv_r l lv
   end.
 
 Definition lookup_hpv (ℓ : Location) (s : side) (l : seq heap_val) : option ℓ :=
@@ -769,7 +775,7 @@ Definition lookup_hpv (ℓ : Location) (s : side) (l : seq heap_val) : option �
 Lemma lookup_hpv_l_eq :
   ∀ ℓ v l,
     lookup_hpv_l ℓ (hpv_l ℓ v :: l) = Some v.
-Proof. intros. rewrite /= eq_refl coerceE //. Qed.
+Proof. intros. rewrite /= eq_refl coerce_locE //. Qed.
 
 Lemma lookup_hpv_l_neq :
   ∀ ℓ ℓ' v l,
@@ -780,7 +786,7 @@ Proof. intros. rewrite /= -(negbK (_ == _)) H //. Qed.
 Lemma lookup_hpv_r_eq :
   ∀ ℓ v l,
     lookup_hpv_r ℓ (hpv_r ℓ v :: l) = Some v.
-Proof. intros. rewrite /= eq_refl coerceE //. Qed.
+Proof. intros. rewrite /= eq_refl coerce_locE //. Qed.
 
 Lemma lookup_hpv_r_neq :
   ∀ ℓ ℓ' v l,
@@ -1167,13 +1173,13 @@ Qed.
   eapply preserve_update_rel_1 ;
     [ reflexivity
     | exact _
-    | rewrite coerceE
+    | rewrite coerce_locE
     ] : ssprove_invariant.
 
 #[export] Hint Extern 12 (preserve_update_rel _ _ _ _ _) =>
   eapply preserve_update_rel_2 ;
     [ reflexivity
-    | rewrite coerceE; intros ?
+    | rewrite coerce_locE; intros ?
     ] : ssprove_invariant.
 
 #[export] Hint Extern 13 (preserve_update_rel _ _ _ _ _) =>

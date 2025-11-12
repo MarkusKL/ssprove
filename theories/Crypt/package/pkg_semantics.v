@@ -45,7 +45,9 @@ Fixpoint repr {A : choiceType} (p : raw_code A) :
   match p with
   | ret x => retrFree x
   | opr o x k =>
-      repr (k (chCanonical (chtgt o)))
+      bindrFree
+        (ropr (op_iota (_; dnull)) (λ v, retrFree v))
+        (λ s, repr (k s))
   | getr l k =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s l)))
@@ -67,7 +69,7 @@ Proof.
   intros A B p f.
   induction p in f |- *.
   - cbn. reflexivity.
-  - simpl. auto.
+  - simpl. f_equal. extensionality y. auto.
   - simpl. f_equal. extensionality x. auto.
   - simpl. f_equal. extensionality x. f_equal. extensionality y. auto.
   - simpl. f_equal. extensionality x. auto.
@@ -76,7 +78,10 @@ Qed.
 Definition repr_cmd {A} (c : command A) :
   rFreeF (@ops_StP heap) (@ar_StP heap) A :=
   match c with
-  | cmd_op o x => retrFree (chCanonical (chtgt o))
+  | cmd_op o x =>
+      bindrFree
+        (ropr (op_iota (_; dnull)) (λ v, retrFree v))
+        (λ s, retrFree s)
   | cmd_get ℓ =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s ℓ)))

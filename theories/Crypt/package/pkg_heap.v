@@ -31,7 +31,7 @@ Definition heap_init (L : Location) : L := projT2 L.2.
 Definition heap := {fmap nat → nat}.
 
 Definition get_heap (map : heap) (l : Location) : l
-  := odflt (chCanonical l) (odflt (Some (heap_init l)) (omap unpickle (map l.1))).
+  := odflt (heap_init l) (obind unpickle (map l.1)).
 
 Definition set_heap (map : heap) (l : Location) (v : l) : heap
   := setm map l.1 (pickle v).
