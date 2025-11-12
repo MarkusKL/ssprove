@@ -26,12 +26,12 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Definition heap_init (A : choice_type) := chCanonical A.
+Definition heap_init (L : Location) : L := projT2 L.2.
 
 Definition heap := {fmap nat → nat}.
 
 Definition get_heap (map : heap) (l : Location) : l
-  := odflt (heap_init l.2) (obind unpickle (map l.1)).
+  := odflt (chCanonical l) (odflt (Some (heap_init l)) (omap unpickle (map l.1))).
 
 Definition set_heap (map : heap) (l : Location) (v : l) : heap
   := setm map l.1 (pickle v).

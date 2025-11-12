@@ -68,9 +68,9 @@ Notation " 'word " := (Word) (at level 2): package_scope.
 
 Context (PRF: Word -> Word -> Word).
 
-Definition k_loc: Location := (0, 'option 'word).
-Definition T_loc: Location := (1, chMap 'word 'word).
-Definition count_loc: Location := (2, 'nat).
+Definition k_loc := mkloc 0 (None : option 'word).
+Definition T_loc := mkloc 1 (emptym : chMap 'word 'word).
+Definition count_loc := mkloc 2 (0 : nat).
 Definition query: nat := 3.
 Definition lookup: nat := 4.
 

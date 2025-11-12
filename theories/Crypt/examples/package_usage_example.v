@@ -72,6 +72,8 @@ Definition p2 : package [interface] I2 :=
     }
   ].
 
+Definition l := mkloc 0 (0 : nat).
+
 Definition test₁ :
   package
     [interface #val #[0] : 'nat → 'nat]
@@ -80,16 +82,16 @@ Definition test₁ :
       #val #[2] : 'unit → 'unit
     ]
   :=
-  [package [fmap (0, 'nat) ] ;
+  [package [fmap l ] ;
     #def #[1] (x : 'nat) : 'nat {
-      getr (0, 'nat) (λ n : nat,
+      getr l (λ n : nat,
         opr (0, ('nat, 'nat)) n (λ m,
-          putr (0, 'nat) m (ret m)
+          putr l m (ret m)
         )
       )
     } ;
     #def #[2] (_ : 'unit) : 'unit {
-      putr (0, 'nat) 0 (ret tt)
+      putr l 0 (ret tt)
     }
   ].
 
@@ -104,17 +106,17 @@ Definition sig := {sig #[0] : 'nat → 'nat }.
       #val #[3] : {map 'nat → 'nat} → 'option 'nat
     ]
   :=
-  [package [fmap (0, 'nat)] ;
+  [package [fmap l] ;
     #def #[1] (x : 'nat) : 'nat {
-      n ← get (0, 'nat) ;;
+      n ← get l ;;
       m ← op sig ⋅ n ;;
-      n ← get (0, 'nat) ;;
+      n ← get l ;;
       m ← op sig ⋅ n ;;
-      #put (0, 'nat) := m ;;
+      #put l := m ;;
       ret m
     } ;
     #def #[2] (_ : 'unit) : 'option ('fin 2) {
-      #put (0, 'nat) := 0 ;;
+      #put l := 0 ;;
       ret (Some (gfin 1))
     } ;
     #def #[3] (m : {map 'nat → 'nat}) : 'option 'nat {
@@ -163,11 +165,9 @@ Definition test₄ : package [interface] _ :=
     }
   ].
 
-Definition ℓ : Location := (0, 'nat).
-
 #[tactic=notac] Equations? foo : code emptym [interface] 'nat :=
   foo := {code
-    n ← get ℓ ;;
+    n ← get l ;;
     ret n
   }.
 Proof.

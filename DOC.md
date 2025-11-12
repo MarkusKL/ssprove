@@ -63,7 +63,7 @@ else (
 ```
 where `ℓ` is defined as
 ```coq
-Definition ℓ : Location := (0, 'option 'nat).
+Definition ℓ := mkloc 0 (None : option nat).
 ```
 
 It first imports two procedures with respective identifiers `0` and `1` and
@@ -84,8 +84,8 @@ Injects any pure value into `raw_code`.
 #### Memory access
 
 A `Location` is a pair of a natural number representing an identifier
-and a type in `choice_type`, for instance `(12, 'nat) : Location`.
-One can *read* memory as follows:
+and an initial value in a `choice_type`, for instance
+`mkloc 12 (0 : nat) : Location`. One can *read* memory as follows:
 ```coq
 x ← get ℓ ;; k x
 (* Or with pattern matching *)
@@ -292,7 +292,7 @@ fill in the validity proof.
 ```coq
 Obligation Tactic := idtac.
 
-Definition ℓ : Location := (0, 'nat).
+Definition ℓ : Location := mkloc 0 (0 : nat).
 
 Equations? foo : code emptym [interface] 'nat :=
   foo := {code

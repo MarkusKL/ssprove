@@ -79,7 +79,7 @@ Module DL (DLP : DLParams) (GP : GroupParam).
   Notation " 'group " := (chGroup) (in custom pack_type at level 2).
   Notation " 'elem " := (chElem) (in custom pack_type at level 2).
 
-  Definition secret_loc : Location := (33, ('option chElem)).
+  Definition secret_loc := mkloc 33 (None : option chElem).
 
   Definition DL_loc : Locations := [ fmap secret_loc ].
 

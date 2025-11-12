@@ -121,6 +121,8 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
    choice_type. This allows us to use this coercion in reverse. *)
 #[reversible] Coercion chInterp : choice_type >-> Crypt.type.
 
+Definition pos0 {n} `{H : Positive n} : chFin (mkpos n) := Ordinal H.
+
 (* Canonical element in a type of the choice_type *)
 #[program] Fixpoint chCanonical (T : choice_type) : T :=
   match T with
@@ -131,7 +133,7 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
   | chProd A B => (chCanonical A, chCanonical B)
   | chMap A B => emptym
   | chOption A => None
-  | chFin n => Ordinal n.(cond_pos)
+  | chFin n => pos0
   | chWord nbits => word0
   | chList A => [::]
   | chSum A B => inl (chCanonical A)

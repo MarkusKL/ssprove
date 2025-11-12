@@ -48,7 +48,7 @@ Module RO (π : ROParams).
   Definition INIT : nat := 0.
   Definition QUERY : nat := 1.
 
-  Definition queries_loc : Location := (2, chMap chQuery chRandom).
+  Definition queries_loc := mkloc 2 (emptym : {fmap chQuery → chRandom}).
   Definition RO_locs : Locations := [fmap queries_loc].
 
   Definition RO_exports :=

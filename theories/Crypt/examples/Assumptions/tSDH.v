@@ -117,7 +117,7 @@ Module tSDH (GP : GroupParam).
   Definition inv_sum (c a : chExp) : nat :=
     1 / (mod_p (c + a)).
 
-  Definition secret_loc : Location := (33, chExp).
+  Definition secret_loc := mkloc 33 (pos0 : chExp).
 
   Definition tSDH_loc := [fmap secret_loc ].
 

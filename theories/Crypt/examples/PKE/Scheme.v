@@ -66,7 +66,7 @@ Section Defs.
   Definition CORR b := if b then CORR0 else CORR1.
 
 
-  Definition mpk_loc : Location := (1, 'option P.(Pub)).
+  Definition mpk_loc := mkloc 1 (None : option P.(Pub)).
   Definition GEN := 0%N.
   Definition QUERY := 1%N.
 
@@ -93,7 +93,7 @@ Section Defs.
       }
     ].
 
-  Definition count_loc : Location := (142, 'nat).
+  Definition count_loc := mkloc 142 (0 : 'nat).
 
   Definition COUNT n :
     package (I_CPA) (I_CPA) :=

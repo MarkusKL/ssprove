@@ -145,7 +145,7 @@ Proof.
   rewrite fsub1set.
   apply mem_imfset.
   apply /dommP.
-  exists c.
+  exists s.
   apply H.
 Qed.
 

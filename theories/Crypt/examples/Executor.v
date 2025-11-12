@@ -221,7 +221,7 @@ Close Scope Z_scope.
 
 Section Test.
 
-  Definition loc : Location :=  (1, 'nat).
+  Definition loc := mkloc 1 (0 : nat).
   Definition locs : Locations := [fmap loc].
 
   Definition test_prog_sub (x : nat):

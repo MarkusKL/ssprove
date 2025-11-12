@@ -235,15 +235,15 @@ Module SigmaProtocol (π : SigmaProtocolParams)
     Definition INIT : nat := 7.
     Definition GET : nat := 8.
 
-    Definition challenge_loc : Location := (7, 'option choiceChallenge).
-    Definition response_loc : Location := (8, 'option choiceResponse).
+    Definition challenge_loc := mkloc 7 (None : 'option choiceChallenge).
+    Definition response_loc := mkloc 8 (None : 'option choiceResponse).
 
     Definition Com_locs : Locations :=
       [fmap challenge_loc ; response_loc ].
 
-    Definition setup_loc : Location := (10, 'bool).
-    Definition statement_loc : Location := (11, choiceStatement).
-    Definition witness_loc : Location := (12, choiceWitness).
+    Definition setup_loc := mkloc 10 (false : bool).
+    Definition statement_loc := mkloc 11 (pos0 : choiceStatement).
+    Definition witness_loc := mkloc 12 (pos0 : choiceWitness).
     Definition KEY_locs : Locations := [fmap setup_loc; witness_loc ; statement_loc].
 
     Definition choiceOpen := (chProd choiceChallenge choiceResponse).

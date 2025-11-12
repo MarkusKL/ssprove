@@ -329,7 +329,7 @@ Lemma set_heap_rename π h l v : set_heap (π ∙ h) (π ∙ l) v = π ∙ set_h
 Proof.
   rewrite /set_heap.
   apply eq_fmap => n.
-  replace n with (@rename Location π (π^-1 ∙ ((n, chUnit)))).1.
+  replace n with (@rename Location π (π^-1 ∙ mkloc n tt)).1.
   2: rewrite renameKV //.
   rewrite setmE mapm2E ?mapm2E ?setmE.
   2,3: eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.

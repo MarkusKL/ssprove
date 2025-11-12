@@ -800,7 +800,7 @@ Proof.
   - simpl in *.
     destruct update_heaps eqn:e1. noconf e.
     destruct (_ == _) eqn:e.
-    + rewrite /get_heap setmE e.
+    + rewrite /get_heap setmE e /=.
       by noconf h.
     + rewrite get_set_heap_neq ?e //.
       eapply ih => //.

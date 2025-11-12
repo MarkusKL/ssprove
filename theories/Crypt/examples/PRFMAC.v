@@ -65,9 +65,9 @@ Notation " 'word " := (Word) (at level 2): package_scope.
 
 #[local] Open Scope package_scope.
 
-Definition k_loc: Location := (0, 'option 'word).
-Definition T_loc: Location := (1, chMap 'word 'word).
-Definition S_loc: Location := (2, 'set ('word × 'word)).
+Definition k_loc := mkloc 0 (None : option 'word).
+Definition T_loc := mkloc 1 (emptym : chMap 'word 'word).
+Definition S_loc := mkloc 2 (emptym : 'set ('word × 'word)).
 Definition lookup: nat := 3.
 Definition encrypt: nat := 4.
 Definition gettag: nat := 5.

@@ -43,7 +43,7 @@ Section LDDH.
       [ GETBC ] : { 'unit ~> 'el G × 'el G }
     ].
 
-  Definition mga_loc : Location := (3, 'option 'el G).
+  Definition mga_loc := mkloc 3 (None : option 'el G).
 
   Definition LDDH bit :
     game I_LDDH :=

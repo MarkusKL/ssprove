@@ -109,7 +109,7 @@ Module MyAlg <: SigmaProtocolAlgorithms MyParam.
 
   Definition i_witness := #|Witness|.
 
-  Definition commit_loc : Location := (2%N, choiceWitness).
+  Definition commit_loc := mkloc 2 (pos0 : choiceWitness).
 
   Definition Sigma_locs : Locations := [fmap commit_loc].
   Definition Simulator_locs : Locations := emptym.
