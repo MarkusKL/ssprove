@@ -123,22 +123,6 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
 
 Definition pos0 {n} `{H : Positive n} : chFin (mkpos n) := Ordinal H.
 
-(* Canonical element in a type of the choice_type *)
-#[program] Fixpoint chCanonical (T : choice_type) : T :=
-  match T with
-  | chUnit => tt
-  | chNat => 0
-  | chInt => 0
-  | chBool => false
-  | chProd A B => (chCanonical A, chCanonical B)
-  | chMap A B => emptym
-  | chOption A => None
-  | chFin n => pos0
-  | chWord nbits => word0
-  | chList A => [::]
-  | chSum A B => inl (chCanonical A)
-  end.
-
 Definition coerce {A B : choice_type} : A → option B
   := λ x, unpickle (pickle x).
 

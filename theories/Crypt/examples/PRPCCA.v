@@ -90,7 +90,7 @@ Qed.
   element.
 *)
 Definition sample_subset {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)): 'fin n :=
-  nth (chCanonical ('fin n)) r (nat_of_ord k).
+  nth pos0 r (nat_of_ord k).
 
 Lemma sample_subset_in {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)):
   sample_subset k \in r.
