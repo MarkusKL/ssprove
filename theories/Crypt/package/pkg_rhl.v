@@ -65,7 +65,7 @@ Proof.
 Qed.
 
 Lemma get_case :
-  ∀ LA (I : heap_choiceType * heap_choiceType → Prop) ℓ,
+  ∀ LA (I : heap * heap → Prop) ℓ,
     INV LA I →
     fhas LA ℓ →
     r⊨ ⦃ λ '(s₀, s₃), I (s₀, s₃) ⦄
@@ -103,7 +103,7 @@ Proof.
 Qed.
 
 Lemma put_case :
-  ∀ {LA} (I : heap_choiceType * heap_choiceType → Prop) l v,
+  ∀ {LA} (I : heap * heap → Prop) l v,
     INV LA I →
     fhas LA l →
     r⊨ ⦃ λ '(s0, s3), I (s0, s3) ⦄
@@ -225,7 +225,7 @@ Qed.
 
 (* TODO This proof is really the same as cmd_sample_preserve_pre *)
 Lemma sampler_case :
-  ∀ {LA} (I : heap_choiceType * heap_choiceType -> Prop) op,
+  ∀ {LA} (I : heap * heap -> Prop) op,
     INV LA I →
     r⊨ ⦃ λ '(s0, s3), I (s0, s3) ⦄
       sampler op [eta ret (A:=Arit op)] ≈ sampler op [eta ret (A:=Arit op)]
@@ -321,9 +321,9 @@ Definition eq_up_to_inv (E : Interface) (I : precond) (p₀ p₁ : raw_package) 
 
 Lemma Pr_eq_empty :
   ∀ {X Y : ord_choiceType}
-    {A : pred (X * heap_choiceType)} {B : pred (Y * heap_choiceType)}
+    {A : pred (X * heap)} {B : pred (Y * heap)}
     Ψ ϕ
-    (c1 : @FrStP heap_choiceType X) (c2 : @FrStP heap_choiceType Y),
+    (c1 : @FrStP heap X) (c2 : @FrStP heap Y),
     ⊨ ⦃ Ψ ⦄ c1 ≈ c2 ⦃ ϕ ⦄ →
     Ψ (empty_heap, empty_heap) →
     (∀ x y, ϕ x y → (A x) ↔ (B y)) →
@@ -436,7 +436,7 @@ Proof.
     - fmap_solve.
   }
   assert (
-    ∀ x y : tgt RUN * heap_choiceType,
+    ∀ x y : tgt RUN * heap,
       (let '(b₀, s₀) := x in λ '(b₁, s₁), b₀ = b₁ ∧ I (s₀, s₁)) y →
       (fst x == true) ↔ (fst y == true)
   ) as Ha.
@@ -472,7 +472,7 @@ Proof.
   unfold SDistr_bind. unfold SDistr_unit.
   rewrite !dletE.
   assert (
-    ∀ x : bool_choiceType * heap_choiceType,
+    ∀ x : bool_choiceType * heap,
       ((let '(b, _) := x in dunit (R:=R) (T:=bool_choiceType) b) true) ==
       (x.1 == true)%:R
   ) as h1.
@@ -481,8 +481,8 @@ Proof.
   }
   assert (
     ∀ y,
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (x.1 == true)%:R * (y x))
+      (λ x : prod_choiceType (tgt RUN) heap, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
+      (λ x : prod_choiceType (tgt RUN) heap, (x.1 == true)%:R * (y x))
   ) as Hrew.
 
   { intros y. extensionality x.
@@ -538,7 +538,7 @@ Proof.
     - apply RUN_in_A_export.
   }
   assert (
-    ∀ x y : tgt RUN * heap_choiceType,
+    ∀ x y : tgt RUN * heap,
       (let '(b₀, s₀) := x in λ '(b₁, s₁), b₀ = b₁ ∧ I (s₀, s₁)) y →
       (fst x == true) ↔ (fst y == true)
   ) as Ha.
@@ -574,7 +574,7 @@ Proof.
   unfold SDistr_bind. unfold SDistr_unit.
   rewrite !dletE.
   assert (
-    ∀ x : bool_choiceType * heap_choiceType,
+    ∀ x : bool_choiceType * heap,
       ((let '(b, _) := x in dunit (R:=R) (T:=bool_choiceType) b) true) ==
       (x.1 == true)%:R
   ) as h1.
@@ -583,8 +583,8 @@ Proof.
   }
   assert (
     ∀ y,
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
-      (λ x : prod_choiceType (tgt RUN) heap_choiceType, (x.1 == true)%:R * (y x))
+      (λ x : prod_choiceType (tgt RUN) heap, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) true) =
+      (λ x : prod_choiceType (tgt RUN) heap, (x.1 == true)%:R * (y x))
   ) as Hrew.
   { intros y. extensionality x.
     destruct x as [x1 x2].
@@ -1054,7 +1054,7 @@ Proof.
 Qed.
 
 Definition spl (o : Op) :=
-  @callrFree (@ops_StP heap_choiceType) (@ar_StP heap_choiceType) (op_iota o).
+  @callrFree (@ops_StP heap) (@ar_StP heap) (op_iota o).
 
 Lemma rsamplerC :
   ∀ {A : ord_choiceType} (o : Op) (c : raw_code A),
@@ -2381,7 +2381,7 @@ Proof.
   intros A₀ A₁ i j pi pj pre post f c₀ c₁ bijf h.
   eapply from_sem_jdg.
   change (repr (sampler (uniform ?i) ?k))
-  with (bindrFree (@Uniform_F (mkpos i) heap_choiceType) (λ x, repr (k x))).
+  with (bindrFree (@Uniform_F (mkpos i) heap) (λ x, repr (k x))).
   eapply bind_rule_pp.
   - eapply Uniform_bij_rule. eauto.
   - intros a₀ a₁. simpl.
@@ -2493,7 +2493,7 @@ Section Uniform_prod.
     eapply from_sem_jdg.
     repeat setoid_rewrite repr_cmd_bind.
     change (repr_cmd (cmd_sample (uniform ?i)))
-    with (@Uniform_F (mkpos i) heap_choiceType).
+    with (@Uniform_F (mkpos i) heap).
     cbn - [semantic_judgement Uniform_F].
     eapply rewrite_eqDistrR. 1: apply: reflexivity_rule.
     intro s. cbn.

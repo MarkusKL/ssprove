@@ -38,13 +38,13 @@ Definition precond := heap * heap → Prop.
 Definition postcond A B := (A * heap) → (B * heap) → Prop.
 
 Definition INV (L : Locations)
-  (I : heap_choiceType * heap_choiceType → Prop) :=
+  (I : heap * heap → Prop) :=
   ∀ s1 s2,
     (I (s1, s2) → ∀ l, fhas L l → get_heap s1 l = get_heap s2 l) ∧
     (I (s1, s2) → ∀ l v, fhas L l → I (set_heap s1 l v, set_heap s2 l v)).
 
 Definition INV' (L1 L2 : Locations)
-  (I : heap_choiceType * heap_choiceType → Prop) :=
+  (I : heap * heap → Prop) :=
   ∀ s1 s2,
     (I (s1, s2) → ∀ l, l.1 \notin domm L1 → l.1 \notin domm L2 →
       get_heap s1 l = get_heap s2 l) ∧
@@ -52,7 +52,7 @@ Definition INV' (L1 L2 : Locations)
       I (set_heap s1 l v, set_heap s2 l v)).
 
 Definition pINV' (P1 P2 : Location -> Prop)
-  (I : heap_choiceType * heap_choiceType → Prop)
+  (I : heap * heap → Prop)
    :=
   ∀ s1 s2,
     (I (s1, s2) → ∀ l, ~ P1 l → ~ P2 l →
@@ -64,7 +64,7 @@ Definition pINV' (P1 P2 : Location -> Prop)
 Definition pdisjoint (L : Locations) (P : Location -> Prop) := forall l, ~ (fhas L l /\ P l).
 
 Lemma pINV'_to_INV (L : Locations) P1 P2
-  (I : heap_choiceType * heap_choiceType → Prop)
+  (I : heap * heap → Prop)
   (HpINV' : pINV' P1 P2 I)
   (Hdisjoint1 : pdisjoint L P1)
   (Hdisjoint2 : pdisjoint L P2) :
@@ -89,7 +89,7 @@ Proof.
 Qed.
 
 Lemma INV'_to_INV (L L1 L2 : Locations)
-  (I : heap_choiceType * heap_choiceType → Prop)
+  (I : heap * heap → Prop)
   (HINV' : INV' L1 L2 I)
   (Hdisjoint1 : fseparate L L1) (Hdisjoint2 : fseparate L L2) :
   INV L I.

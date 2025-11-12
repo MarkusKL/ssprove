@@ -30,8 +30,6 @@ Definition heap_init (A : choice_type) := chCanonical A.
 
 Definition heap := {fmap nat → nat}.
 
-Definition heap_choiceType := Choice.clone _ heap.
-
 Definition get_heap (map : heap) (l : Location) : l
   := odflt (heap_init l.2) (obind unpickle (map l.1)).
 

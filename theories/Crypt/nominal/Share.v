@@ -74,24 +74,16 @@ Lemma mapm2E_cancel
     (m : {fmap T → S}) (x : T') :
     injective f → cancel f' f →
     mapm2 (T:=T) (T':=T') f g m x = omap g (m (f' x)).
-Proof.
-  intros H H'.
-  rewrite -{1}(H' x).
-  rewrite mapm2E //.
-Qed.
+Proof. intros H H'. rewrite -{1}(H' x) mapm2E //. Qed.
 
 Lemma rename_locE {L : Locations} {π} {n} : (π ∙ L : Locations) n = L (natize (π^-1%fperm (atomize n))).
 Proof.
   unfold rename. simpl.
   rewrite (mapm2E_cancel (λ n, natize (π^-1%fperm (atomize n)))).
   - by rewrite omap_id.
-  - eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.
-  - simpl. eapply (can_comp (can_comp natizeK (fpermKV _)) atomizeK).
+  - eapply can_inj, (can_comp natizeK), (can_comp (fpermK π)), atomizeK.
+  - simpl. eapply (can_comp (can_comp natizeK (fpermKV π)) atomizeK).
 Qed.
-
-Lemma rename_emptym_Locations π :
-  π ∙ (emptym : Locations) = emptym.
-Proof. done. Qed.
 
 Lemma rename_setm_Locations π (m : Locations) n A :
   π ∙ (setm m n A : Locations)
@@ -134,7 +126,7 @@ Obligation 2.
   2: done. move=> {H} {x} {F}.
   intros π.
   refine (fmap_ind _ _).
-  1: rewrite rename_emptym_Locations domm0 imfset0 /rename //= imfset0 //.
+  1: rewrite domm0 imfset0 /rename //= imfset0 //.
   intros m H n A H'.
   rewrite rename_setm_Locations.
   rewrite 2!domm_set 2!imfsetU 2!imfset1 natizeK -H.
@@ -362,7 +354,7 @@ Qed.
 
 (* ID lemmas *)
 
-Lemma share_link_id {L I E} {p : nom_package} `{ValidPackage L I E p}
+Lemma share_link_id {I E} p `{ValidPackage (loc p) I E p}
   : p ∘ ID I = p.
 Proof.
   apply eq_nom_package; rewrite //=.
@@ -370,7 +362,7 @@ Proof.
   - rewrite link_id //.
 Qed.
 
-Lemma id_share_link {L I E} {p : nom_package} `{ValidPackage L I E p}
+Lemma id_share_link {I E} p `{ValidPackage (loc p) I E p}
   : ID E ∘ p = p.
 Proof.
   apply eq_nom_package; rewrite //= id_link //.
@@ -445,9 +437,9 @@ Proof.
   - rewrite par_assoc //.
 Qed.
 
-Lemma share_interchange {A B C D E F} {L1 L2 L3 L4} (p1 p2 p3 p4 : nom_package)
-  `{ValidPackage L1 B A p1} `{ValidPackage L2 E D p2}
-  `{ValidPackage L3 C B p3} `{ValidPackage L4 F E p4} :
+Lemma share_interchange {A B C D E F} p1 p2 p3 p4
+  `{ValidPackage (loc p1) B A p1} `{ValidPackage (loc p2) E D p2}
+  `{ValidPackage (loc p3) C B p3} `{ValidPackage (loc p4) F E p4} :
   fcompat (loc p2) (loc p3) →
   fseparate (val p3) (val p4) →
   (p1 ∘ p3) || (p2 ∘ p4) = (p1 || p2) ∘ (p3 || p4).

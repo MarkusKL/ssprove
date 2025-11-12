@@ -42,6 +42,89 @@ Set Primitive Projections.
 #[local] Open Scope real_scope.
 
 
+Section DistrLemmas.
+  Context [T U V : choiceType].
+
+  Lemma dlet_commut {A : distr R T} {B : distr R U}
+    {f : T → U → distr R V} :
+    (\dlet_(x <- A) \dlet_(y <- B) f x y) =
+    (\dlet_(y <- B) \dlet_(x <- A) f x y).
+  Proof.
+    apply distr_ext.
+    pose proof @RulesStateProb.SD_commutativity'.
+    cbn in H.
+    unfold SDistr_bind, SDistr_carrier in H.
+    specialize (H T U V A).
+    rewrite H //.
+  Qed.
+
+  Lemma dlet_unit_ext {v : T} {f : T → distr R U} :
+    \dlet_(y <- dunit v) f y = f v.
+  Proof. apply distr_ext, dlet_unit. Qed.
+
+  Lemma dlet_dlet_ext {t : distr R T}
+    {f1 : T → distr R U} {f2 : U → distr R V} :
+    \dlet_(x <- \dlet_(y <- t) f1 y) f2 x
+    = \dlet_(y <- t) \dlet_(x <- f1 y) f2 x.
+  Proof. apply distr_ext, dlet_dlet. Qed.
+
+  Lemma dlet_null_ext {f : T → distr R U} :
+    \dlet_(i <- dnull) f i = dnull.
+  Proof. apply distr_ext, dlet_null. Qed.
+
+  Lemma eq_dlet {m} {f g : T → distr R U} : f =1 g
+    → \dlet_(x <- m) f x = \dlet_(x <- m) g x.
+  Proof. intros H. by apply distr_ext, dlet_f_equal. Qed.
+End DistrLemmas.
+
+Section PrCodeLemmas.
+  Lemma Pr_Pr_code {G} :
+    Pr G = dfst (Pr_code (resolve G RUN tt) empty_heap).
+  Proof.
+    unfold Pr, SDistr_bind, SDistr_unit, Pr_op, dfst.
+    apply eq_dlet => [[x h]] //.
+  Qed.
+
+  Lemma Pr_code_ret {A : choiceType} {x : A} {h} :
+    Pr_code (ret x) h = dunit (x, h).
+  Proof. cbn. rewrite /SubDistr.SDistr_obligation_2 2!SDistr_rightneutral //. Qed.
+
+  Lemma Pr_code_get {B : choiceType} {l : Location} {k : l → raw_code B} {h} :
+    Pr_code (x ← get l ;; k x) h = Pr_code (k (get_heap h l)) h.
+  Proof. cbn; done. Qed.
+
+  Lemma Pr_code_put {B : choiceType} {l : Location} {a} {k : raw_code B} {h} :
+    Pr_code (#put l := a ;; k) h = Pr_code k (set_heap h l a).
+  Proof. cbn; done. Qed.
+
+  Lemma Pr_code_call {B : choiceType} {o : opsig} {a : src o}
+      {k : tgt o → raw_code B} {h} :
+    Pr_code (x ← op o ⋅ a ;; k x) h = Pr_code (k (chCanonical _)) h.
+  Proof. cbn; done. Qed.
+
+  Lemma Pr_code_sample {A : choiceType} {op' : Op}
+      {k : Arit op' → raw_code A} {h} :
+    Pr_code (x ← sample op' ;; k x) h = \dlet_(x <- op'.π2) Pr_code (k x) h.
+  Proof. cbn. rewrite /SubDistr.SDistr_obligation_2 2!SDistr_rightneutral //. Qed.
+
+  Lemma Pr_code_bind {T T' : choiceType} {c} {f : T → raw_code T'} {h}
+    : Pr_code (x ← c ;; f x) h
+    = \dlet_(y <- Pr_code c h) Pr_code (f y.1) y.2.
+  Proof.
+    move: h.
+    induction c; cbn [bind]; intros h.
+    - rewrite Pr_code_ret dlet_unit_ext //.
+    - rewrite 2!Pr_code_call //.
+    - rewrite 2!Pr_code_get //.
+    - rewrite 2!Pr_code_put //.
+    - rewrite 2!Pr_code_sample dlet_dlet_ext.
+      by apply eq_dlet.
+  Qed.
+
+  Lemma Pr_code_fail {T} {h} : Pr_code (@fail T) h = dnull.
+  Proof. rewrite Pr_code_sample dlet_null_ext //. Qed.
+End PrCodeLemmas.
+
 (* Code as nominal *)
 
 #[non_forgetful_inheritance]
@@ -62,8 +145,7 @@ Fixpoint rename_code_def {A} π (c : raw_code A) :=
   | opr o x k => opr o x (fun y => rename_code_def π (k y))
   | getr l k => getr (rename π l) (fun y => rename_code_def π (k y))
   | putr l v k => putr (rename π l) v (rename_code_def π k)
-  | pkg_core_definition.sampler op k =>
-      pkg_core_definition.sampler op (fun y => rename_code_def π (k y))
+  | sampler op k => sampler op (fun y => rename_code_def π (k y))
   end.
 
 Program Definition code_HasAction {A}
@@ -222,143 +304,91 @@ Proof.
     apply fhas_rename_raw_package, H.
 Qed.
 
+Program Definition heap_HasAction : HasAction heap
+  := HasAction.Build heap
+    (λ π L, mapm2 (λ x, natize (π (atomize x))) id L) _ _.
+Obligation 1. apply eq_fmap => y. rewrite mapm2E // omap_id //. Qed.
+Obligation 2.
+  etransitivity.
+  2: apply (mapm2_comp unit).
+  2,3: eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.
+  simpl. f_equal. extensionality n => /=.
+  by rewrite natizeK fpermM.
+Qed.
+
+HB.instance Definition _ : HasAction heap
+  := heap_HasAction.
+
+Lemma get_heap_rename π h l : get_heap (π ∙ h) (π ∙ l) = get_heap h l.
+Proof.
+  rewrite /get_heap mapm2E /= ?omap_id //.
+  eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.
+Qed.
+
+Lemma set_heap_rename π h l v : set_heap (π ∙ h) (π ∙ l) v = π ∙ set_heap h l v.
+Proof.
+  rewrite /set_heap.
+  apply eq_fmap => n.
+  replace n with (@rename Location π (π^-1 ∙ ((n, chUnit)))).1.
+  2: rewrite renameKV //.
+  rewrite setmE mapm2E ?mapm2E ?setmE.
+  2,3: eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.
+  rewrite renameKV 2!omap_id.
+  destruct (_ == _)%B eqn:E;
+    move: E => /eqP E;
+    destruct (_ == _)%B eqn:E';
+    move: E' => // /eqP E'.
+  - simpl in E.
+    by rewrite /rename /= E natizeK fpermK atomizeK in E'.
+  - simpl in E'.
+    by rewrite /rename /= -E' natizeK fpermKV atomizeK in E.
+Qed.
+
 
 (* Pr proof *)
 
-Definition my_inv' π := fun '(s0, s1) =>
-  ∀ l, get_heap s0 l = get_heap s1 (π ∙ l).
-
-Fixpoint importless {A} (c : raw_code A) := 
-  match c with
-  | ret x => ret x
-  | opr o _ k => importless (k (chCanonical (chtgt o)))
-  | getr l k => getr l (fun x => importless (k x))
-  | putr l v k => putr l v (importless k)
-  | pkg_core_definition.sampler op k =>
-      pkg_core_definition.sampler op (fun x => importless (k x))
-  end.
-
-Lemma r_rename {A} π (c : raw_code A) :
-    ⊢ ⦃ λ '(h₀, h₁), my_inv' π (h₀, h₁) ⦄
-        importless c ≈ importless (π ∙ c)
-      ⦃ λ '(b0, s0) '(b1, s1), b0 = b1 /\ my_inv' π (s0, s1) ⦄.
+Lemma Pr_code_rename {A} π (c : raw_code A) x (h' : heap) :
+  ∀ h, Pr_code c h (x, h') = Pr_code (π ∙ c) (π ∙ h) (x, π ∙ h').
 Proof.
-  induction c.
-  - by apply r_ret.
-  - unfold rename; simpl.
-    apply H.
-  - apply r_get_remember_lhs => x.
-    destruct l as [n T]; simpl.
-    eapply @r_get_remind_rhs.
-    2: apply r_forget_lhs, H.
-    intros [s0 s1] [h1 h2].
-    unfold rem_lhs, rem_rhs in h2 |- *.
-    subst; symmetry.
-    apply (h1 (n, T)).
-  - apply r_put_vs_put.
-    ssprove_restore_pre; [| apply IHc ].
-    intros s0 s1 H1.
-    intros l'.
-    elim: (eq_dec l.1 l'.1) => [H4|H4].
-      + rewrite /rename //= H4 /get_heap /set_heap.
-        rewrite 2!setmE H4 2!eq_refl //=.
-      + rewrite !get_set_heap_neq.
-        * by apply H1.
-        * apply /eqP.
-          intros H.
-          apply (can_inj natizeK) in H.
-          apply (can_inj (fpermK _)) in H.
-          apply (can_inj atomizeK) in H.
-          by apply H4.
-        * apply /negP.
-          move => /eqP E; subst.
-          by apply H4.
-  - eapply (rsame_head_cmd_alt (cmd_sample op)) ; [
-        eapply cmd_sample_preserve_pre
-      | idtac
-      ].
-    apply H.
-Qed.
-
-Lemma repr_importless {A} (c : raw_code A) : repr (importless c) = repr c.
-Proof.
-  induction c.
-  + done.
-  + simpl.
-    rewrite H //.
-  + simpl.
-    f_equal.
-    apply functional_extensionality => x.
-    rewrite H //.
-  + simpl.
-    f_equal.
-    apply functional_extensionality => x.
-    rewrite IHc //.
-  + simpl.
-    f_equal.
-    apply functional_extensionality => x.
-    rewrite H //.
+  induction c => h; rewrite {1}/rename /=.
+  - rewrite 2!Pr_code_ret 2!dunit1E 2!xpair_eqE.
+    destruct (x0 == x)%B => //=.
+    destruct (_ == _)%B eqn:E;
+      move: E => /eqP E;
+      destruct (_ == _)%B eqn:E';
+      move: E' => /eqP E' //.
+    + by subst.
+    + by rewrite -(renameK π (h : heap)) E' renameK in E.
+  - rewrite 2!Pr_code_call H //.
+  - by rewrite 2!Pr_code_get get_heap_rename.
+  - by rewrite 2!Pr_code_put set_heap_rename.
+  - rewrite 2!Pr_code_sample 2!dletE.
+    apply eq_psum => y.
+    by rewrite H.
 Qed.
 
 Lemma coerce_kleisli_rename {A A' B B'} π g x
-  : π ∙ @coerce_kleisli A A' B B' g x
-  = @coerce_kleisli A A' B B' (λ x, π ∙ g x) x.
+  : π ∙ @coerce_kleisli A A' B B' g x = coerce_kleisli (λ x, π ∙ g x) x.
+Proof. by rewrite /coerce_kleisli -2!lock mcode_bind. Qed.
+
+Lemma resolve_rename π P F x
+  : π ∙ (resolve P F x) = resolve (π ∙ P) F x.
 Proof.
-  rewrite /coerce_kleisli -2!lock.
-  rewrite mcode_bind //.
+  rewrite /resolve mapmE.
+  elim: (P F.1) => [[S [T f]]|] //.
+  by rewrite coerce_kleisli_rename.
 Qed.
 
-(* Proof heavily inspired by eq_upto_inv_perf_ind in SSProve *)
 Lemma Pr_rename {π} {P : raw_package} {t} :
   Pr P t = Pr (π ∙ P) t.
 Proof.
-  unfold Pr, Pr_op.
-  unfold rename, resolve; simpl.
-  rewrite mapmE.
-  destruct (P 0%N) eqn:req; [simpl | done ].
-  destruct t0 as [A [B r]] => //=.
-  unfold Pr_code.
-  unfold Pr_code, SDistr_bind, SDistr_unit.
-  rewrite 2!dletE.
-  simpl.
-
-  assert (
-    ∀ y,
-      (λ x : prod (tgt RUN) heap_choiceType, (y x) * (let '(b, _) := x in dunit (R:=R) (T:=tgt RUN) b) t) =
-      (λ x : prod (tgt RUN) heap_choiceType, (eq_op x.1 t)%:R * (y x))
-  ) as Hrew.
-  { intros y. extensionality x.
-    destruct x as [x1 x2].
-    rewrite dunit1E.
-    simpl. rewrite GRing.mulrC. reflexivity.
-  }
-  rewrite 2!Hrew.
-
-  unfold TransformingLaxMorph.rlmm_from_lmla_obligation_1. simpl.
-  unfold SubDistr.SDistr_obligation_2. simpl.
-  unfold OrderEnrichedRelativeAdjunctionsExamples.ToTheS_obligation_1.
-  rewrite !SDistr_rightneutral. simpl.
-
-  assert (
-    ∀ x y : tgt RUN * heap_choiceType,
-      (let '(b₀, s₀) := x in λ '(b₁, s₁), b₀ = b₁ ∧ my_inv' π (s₀, s₁)) y →
-      (eq_op (fst x) t) ↔ (eq_op (fst y) t)
-  ) as Ha.
-  { intros [b₀ s₀] [b₁ s₁]. simpl.
-    intros [e ?]. rewrite e. intuition auto.
-  }
-
-  pose (H := r_rename π (@coerce_kleisli A 'unit B 'bool r tt)).
-  apply to_sem_jdg in H.
-  epose proof (Heq := Pr_eq_empty (my_inv' π)
-    (λ '(b0, s0) '(b1, s1), b0 = b1 /\ my_inv' π (s0, s1))
-    _ _ H _ Ha).
-  rewrite -(repr_importless (@coerce_kleisli A 'unit B 'bool r tt)).
-  rewrite -(repr_importless (@coerce_kleisli A 'unit B 'bool (λ x, π ∙ r x) tt)).
-  rewrite -coerce_kleisli_rename.
-  apply Heq.
-  Unshelve.
-  done.
+  rewrite 2!Pr_Pr_code 2!dfstE.
+  rewrite (reindex_psum (P := predT) (h := @rename heap π^-1)) //=.
+  - apply eq_psum => x.
+    by rewrite (Pr_code_rename π) renameKV -resolve_rename.
+  - exists (@rename heap π).
+    + intros h _. by rewrite renameKV.
+    + intros h _. by rewrite renameK.
 Qed.
 
 Add Parametric Morphism : Pr with

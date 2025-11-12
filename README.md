@@ -505,9 +505,9 @@ Lemma eq_upto_inv_perf_ind :
 ```coq
 Lemma Pr_eq_empty :
   ∀ {X Y : ord_choiceType}
-    {A : pred (X * heap_choiceType)} {B : pred (Y * heap_choiceType)}
+    {A : pred (X * heap)} {B : pred (Y * heap)}
     Ψ ϕ
-    (c1 : FrStP heap_choiceType X) (c2 : FrStP heap_choiceType Y)
+    (c1 : FrStP heap X) (c2 : FrStP heap Y)
     ⊨ ⦃ Ψ ⦄ c1 ≈ c2 ⦃ ϕ ⦄ →
     Ψ (empty_heap, empty_heap) →
     (∀ x y,  ϕ x y → (A x) ↔ (B y)) →
