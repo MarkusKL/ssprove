@@ -58,7 +58,7 @@ Section PRFMAC_example.
 Variable (n: nat).
 
 Definition Word_N: nat := 2^n.
-Definition Word: choice_type := chFin (mkpos Word_N).
+Definition Word: choice_type := chFin Word_N.
 
 Notation " 'word " := (Word) (in custom pack_type at level 2).
 Notation " 'word " := (Word) (at level 2): package_scope.

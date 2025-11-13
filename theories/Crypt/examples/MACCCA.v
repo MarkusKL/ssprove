@@ -55,7 +55,7 @@ Notation " 'set t " := (chSet t) (at level 2): package_scope.
 Variable (n: nat).
 
 Definition Word_N: nat := 2^n.
-Definition Word: choice_type := chFin (mkpos Word_N).
+Definition Word: choice_type := chFin Word_N.
 
 Context (mac: Word -> Word -> Word).
 Context (enc: Word -> Word -> Word).

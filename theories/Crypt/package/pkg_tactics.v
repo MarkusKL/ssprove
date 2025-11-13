@@ -194,24 +194,6 @@ Proof.
   apply h.
 Qed.
 
-Ltac choice_type_eq_prove :=
-  lazymatch goal with
-  | |- chProd _ _ = chProd _ _ => f_equal ; choice_type_eq_prove
-  | |- chMap _ _ = chMap _ _ => f_equal ; choice_type_eq_prove
-  | |- chOption _ = chOption _ => f_equal ; choice_type_eq_prove
-  | |- chFin _ = chFin _ => f_equal ; apply positive_ext ; reflexivity
-  | |- _ = _ => reflexivity
-  end.
-
-#[export] Hint Extern 4 (ValidPackage ?L ?I ?E (mkfmap ((?i, mkdef ?A ?B ?f) :: ?p)))
-  =>
-  eapply valid_package_cons_upto ; [
-  | intro
-  | choice_type_eq_prove
-  | choice_type_eq_prove
-  ]
-  : typeclass_instances ssprove_valid_db.
-
 #[export] Hint Extern 10 (ValidCode ?L ?I (let u := _ in _)) =>
   cbv zeta
   : typeclass_instances ssprove_valid_db.

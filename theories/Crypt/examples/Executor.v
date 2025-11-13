@@ -47,7 +47,8 @@ Section Executor.
     nat_ch_aux (NSUnit) 'unit := Some tt ;
     nat_ch_aux (NSNat n) 'nat := Some n ;
     nat_ch_aux (NSNat n) 'bool := Some (Nat.odd n) ;
-    nat_ch_aux (NSNat n) 'fin n' := Some _ ;
+    nat_ch_aux (NSNat n) 'fin 0 := None ;
+    nat_ch_aux (NSNat n) 'fin (n'.+1) := Some (inord n) ;
     nat_ch_aux (NSOption (Some a)) ('option l) := Some (nat_ch_aux a l) ;
     nat_ch_aux (NSOption None) ('option l) := Some None ;
     nat_ch_aux (NSProd a b) (l1 × l2) with (nat_ch_aux a l1, nat_ch_aux b l2) := {
@@ -57,12 +58,8 @@ Section Executor.
     nat_ch_aux (NSNat n) ('word u) := Some _ ;
     nat_ch_aux _ _ := None.
   Proof.
-    - eapply @Ordinal.
-      instantiate (1 := n %% n').
-      apply ltn_pmod.
-      apply cond_pos0.
-    - apply wrepr.
-      apply (BinInt.Z.of_nat n).
+    apply wrepr.
+    apply (BinInt.Z.of_nat n).
   Defined.
 
   Definition nat_ch (x : option NatState) (l : choice_type) : option (Value l) :=
@@ -103,7 +100,9 @@ Section Executor.
       cbn. simp nat_ch_aux. simpl in *. now rewrite H H0.
     - simp ch_nat. destruct ch_nat; try easy.
       simpl in *. simp nat_ch_aux. now f_equal.
-    - simp ch_nat. simpl. simp nat_ch_aux.
+    - destruct n.
+      { exfalso. eapply (fintype0 v). by rewrite card_ord. }
+      simp ch_nat. simpl. simp nat_ch_aux.
       f_equal.
       unfold nat_ch_aux_obligation_1.
       have lv := ltn_ord v.
@@ -111,12 +110,10 @@ Section Executor.
       erewrite <- inj_eq.
       2: apply ord_inj.
       simpl.
-      rewrite modn_small.
-      2: assumption.
-      done.
+      by rewrite inordK.
     - simp ch_nat. simpl. simp nat_ch_aux.
       f_equal.
-      unfold nat_ch_aux_obligation_2.
+      unfold nat_ch_aux_obligation_1.
       rewrite @Znat.Z2Nat.id.
       + rewrite wrepr_unsigned.
         reflexivity.
@@ -178,7 +175,11 @@ End Executor.
       | Some (seed', x) => Some (seed', Some x)
       | _ => None
       end
-  | chFin n => Some ((seed + 1)%N, _)
+  | chFin n =>
+      match n with
+      | 0 => None
+      | n'.+1 => Some ((seed + 1)%N, _)
+      end
   | chWord n => Some ((seed + 1)%N, _)
   | chList A =>
       match sampler A seed with
@@ -201,9 +202,8 @@ End Executor.
   end.
 Next Obligation.
   eapply Ordinal.
-  instantiate (1 := (seed %% n)%N).
-  rewrite ltn_mod.
-  apply n.
+  instantiate (1 := (seed %% n'.+1)%N).
+  by rewrite ltn_mod.
 Defined.
 Local Open Scope Z_scope.
 Next Obligation.

@@ -48,10 +48,10 @@ Section PRF_example.
 
   Definition Words_N : nat := 2^n.
   Definition Words_N_pos : Positive Words_N := _.
-  Definition Words : choice_type := chFin (mkpos Words_N).
+  Definition Words : choice_type := chFin Words_N.
   Definition Key_N : nat := 2^n.
   Definition Key_N_pos : Positive Key_N := _.
-  Definition Key : choice_type := chFin (mkpos Key_N).
+  Definition Key : choice_type := chFin Key_N.
 
   (* TW: Is this normal that this definition is so big? *)
   #[program] Definition plus : Words → Key → Words :=

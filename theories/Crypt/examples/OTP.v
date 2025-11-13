@@ -205,9 +205,6 @@ Section OTP_example.
 
   Definition i1 : nat := 0.
 
-  Definition i_words : positive := mkpos (2^n)%N.
-  Definition i_key : positive := mkpos (2^n)%N.
-
   Notation " 'word " := ('fin (2^n)%N) (in custom pack_type at level 2).
 
   Definition key2ch : Key → 'fin (2^n)%N.
@@ -285,7 +282,7 @@ Section OTP_example.
   Definition KeyGen {L : Locations} :
     code L [interface] Key :=
     {code
-       k ← sample uniform i_key ;;
+       k ← sample uniform N ;;
        ret (ch2key k)
     }.
 
@@ -304,7 +301,7 @@ Section OTP_example.
     [package IND_CPA_location ;
         #def #[i1] (m : 'word) : 'word
         {
-          k_val ← sample uniform i_key ;;
+          k_val ← sample uniform N ;;
           r ← Enc (ch2words m) (ch2key k_val) ;;
           ret (words2ch r)
         }
@@ -317,8 +314,8 @@ Section OTP_example.
     [package IND_CPA_location ;
       #def #[i1] (m : 'word) : 'word
       {
-        m'    ← sample uniform i_words ;;
-        k_val ← sample uniform i_key ;;
+        m'    ← sample uniform N ;;
+        k_val ← sample uniform N ;;
         r     ← Enc (ch2words m') (ch2key k_val) ;;
         ret (words2ch r)
       }
@@ -337,7 +334,7 @@ Section OTP_example.
     (* TODO Why doesn't it infer this? *)
     eapply r_const_sample_L with (op := uniform _). 1: exact _. intro m_val.
     pose (f :=
-      λ (k : Arit (uniform i_key)),
+      λ (k : Arit (uniform N)),
         words2ch (ch2key k ⊕ ch2words m ⊕ (ch2words m_val))
     ).
     assert (bij_f : bijective f).

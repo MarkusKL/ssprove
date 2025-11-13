@@ -155,33 +155,6 @@ Qed. *)
 #[export] Hint Extern 2 (Positive (?n * ?m)) =>
   eapply Positive_prod : typeclass_instances.
 
-Record positive := mkpos {
-  pos : nat ;
-  cond_pos : Positive pos
-}.
-Arguments mkpos _ {_}.
-
-Coercion pos : positive >-> nat.
-
-#[export] Hint Extern 1 (Positive ?n.(pos)) =>
-  eapply cond_pos
-  : typeclass_instances.
-
-Definition positive_eq : rel positive :=
-  λ u v, u.(pos) == v.(pos).
-
-Lemma positive_eqP : Equality.axiom positive_eq.
-Proof.
-  intros [n hn] [m hm]. unfold positive_eq. simpl.
-  destruct (n == m) eqn:e.
-  - move: e => /eqP e. subst. left.
-    f_equal. apply eq_irrelevance.
-  - move: e => /eqP e. right.
-    intro h. apply e. inversion h. reflexivity.
-Qed.
-
-HB.instance Definition _ := hasDecEq.Build _ positive_eqP.
-
 (** Lt class, for finite types  *)
 
 Class Lt n m :=
@@ -213,36 +186,11 @@ Qed.
   end
   : typeclass_instances.
 
-Lemma positive_ext :
-  ∀ (p q : positive),
-    p.(pos) = q.(pos) →
-    p = q.
-Proof.
-  intros [p hp] [q hq] e.
-  cbn in e. subst.
-  f_equal. apply eq_irrelevance.
-Qed.
-
-(** Tactic to unfold all positives (NEEDED?) *)
-Ltac unfold_positives :=
-  repeat match goal with
-  | p : positive |- _ =>
-    let n := fresh "p" in
-    let h := fresh "h" in
-    destruct p as [n h] ;
-    repeat change (pos {| pos := n ; cond_pos := h |}) with n in *
-  end.
-
 #[export] Instance PositiveEqDec n : EqDec (Positive n).
 Proof.
   left. apply eq_irrelevance.
 Qed.
 
-Derive NoConfusion NoConfusionHom for positive.
-
-(* Utility for defining functions with Equations *)
-Definition inspect {A : Type} (x : A) : { y : A | y = x } :=
-  exist _ x Logic.eq_refl.
 
 (** Hints notation
 
