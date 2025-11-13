@@ -111,8 +111,8 @@ Qed.
 Definition samp_no_repl {n} `{Positive n} {L} (r: {fset ('fin n)}): code L [interface] ('fin n) :=
   {code
     let r' := compl r in
-    #assert (0 < size r') as H ;;
-    i <$ @uniform _ H ;;
+    #assert (0 < size r') ;;
+    i <$ @uniform (size r') ;;
     ret (sample_subset i)
   }.
 

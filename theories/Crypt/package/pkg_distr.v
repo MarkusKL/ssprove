@@ -36,8 +36,8 @@ Set Primitive Projections.
 
 (** Uniform distributions  *)
 
-Definition uniform (i : nat) `{Positive i} : Op :=
-  existT _ ('fin i) (Uni_W (mkpos i)).
+Definition uniform (i : nat) : Op :=
+  existT _ ('fin i) (Uni_W i).
 
 (** Some bijections
 
@@ -82,7 +82,7 @@ Proof.
   rewrite card_prod. simpl. rewrite !card_ord. reflexivity.
 Qed.
 
-Definition ch2prod {i j} `{Positive i} `{Positive j}
+Definition ch2prod {i j}
   (x : Arit (uniform (i * j))) :
   (Arit (uniform i)) * (Arit (uniform j)).
 Proof.
@@ -91,7 +91,7 @@ Proof.
   auto.
 Defined.
 
-Definition prod2ch {i j} `{Positive i} `{Positive j}
+Definition prod2ch {i j}
   (x : (Arit (uniform i)) * (Arit (uniform j))) :
   Arit (uniform (i * j)).
 Proof.
@@ -102,46 +102,33 @@ Proof.
 Defined.
 
 Definition ch2prod_prod2ch :
-  ∀ {i j} `{Positive i} `{Positive j}
+  ∀ {i j}
     (x : (Arit (uniform i)) * (Arit (uniform j))),
     ch2prod (prod2ch x) = x.
 Proof.
-  intros i j hi hj x.
+  intros i j x.
   unfold ch2prod, prod2ch.
   rewrite -[RHS]otf_fto. f_equal.
   rewrite rew_opp_l. reflexivity.
 Qed.
 
 Definition prod2ch_ch2prod :
-  ∀ {i j} `{Positive i} `{Positive j} (x : Arit (uniform (i * j))),
+  ∀ {i j} (x : Arit (uniform (i * j))),
     prod2ch (ch2prod x) = x.
 Proof.
-  intros i j hi hj x.
+  intros i j x.
   unfold ch2prod, prod2ch.
   rewrite fto_otf.
   rewrite rew_opp_r. reflexivity.
 Qed.
 
-Lemma repr_Uniform :
-  ∀ i `{Positive i},
-    repr (x ← sample uniform i ;; ret x) = @Uniform_F (mkpos i) _.
-Proof.
-  intros i hi. reflexivity.
-Qed.
+Lemma repr_Uniform : ∀ i,
+    repr (x ← sample uniform i ;; ret x) = @Uniform_F i _.
+Proof. by intros. Qed.
 
-Lemma repr_cmd_Uniform :
-  ∀ i `{Positive i},
-    repr_cmd (cmd_sample (uniform i)) = @Uniform_F (mkpos i) _.
-Proof.
-  intros i hi. reflexivity.
-Qed.
-
-Lemma ordinal_finType_inhabited :
-  ∀ i `{Positive i}, (ordinal i :finType).
-Proof.
-  intros i hi.
-  exists 0%N. auto.
-Qed.
+Lemma repr_cmd_Uniform : ∀ i,
+    repr_cmd (cmd_sample (uniform i)) = @Uniform_F i _.
+Proof. by intros. Qed.
 
 (** Fail and Assert *)
 

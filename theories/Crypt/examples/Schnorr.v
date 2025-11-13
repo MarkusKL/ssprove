@@ -468,17 +468,16 @@ Proof.
   simplify_linking.
   destruct hwe as [e e'].
   apply r_const_sample_R.
-  1: apply LosslessOp_uniform.
+  1: apply LosslessOp_uniform, i_challenge_pos.
   intros e_rand.
   ssprove_code_simpl.
   ssprove_code_simpl_more.
   apply r_const_sample_L.
-  1: apply LosslessOp_uniform.
+  1: by apply LosslessOp_uniform.
   intros b.
   simpl.
-  case (Nat.even b) eqn:hb.
-  - rewrite hb ; clear hb.
-    ssprove_code_simpl.
+  case (Nat.even b).
+  - ssprove_code_simpl.
     ssprove_code_simpl_more.
     ssprove_code_simpl.
     ssprove_code_simpl_more.
@@ -502,8 +501,7 @@ Proof.
     eapply r_put_vs_put.
     ssprove_restore_pre. 1: ssprove_invariant.
     apply r_ret. intuition auto.
-  - rewrite hb ; clear hb.
-    ssprove_code_simpl.
+  - ssprove_code_simpl.
     ssprove_code_simpl_more.
     ssprove_code_simpl.
     ssprove_code_simpl_more.

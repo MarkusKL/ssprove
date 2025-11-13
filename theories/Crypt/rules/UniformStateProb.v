@@ -20,22 +20,14 @@ Local Open Scope ring_scope.
 (* general Rules + Rules for uniform distributions over a finite
     family of non-empty finite types *)
 
-Definition Index : Type := positive.
+Definition Index : Type := nat.
 
 Definition fin_family (i : Index) : finType := Finite.clone _ (chFin i).
-
-Lemma F_w0 :
-  forall (i : Index), fin_family i.
-Proof.
-  intros i. unfold fin_family. cbn.
-  exists 0%N. eapply i.(cond_pos).
-Qed.
 
 (* extend the initial parameters for the rules  *)
 
 Definition Uni_W : forall i, SDistr (fin_family i).
   move=> i. apply (@uniform_F (fin_family i)).
-  apply F_w0.
 Defined.
 
 Definition Uni_W' : forall i, SDistr( chFin i) := Uni_W.
@@ -75,7 +67,7 @@ Definition Uniform ( i : Index ) { S : choiceType } { s : S } :=
 Lemma Uniform_eval (i : Index ) {S : choiceType} {s : S} :
   forall (st : S) (w : fin_family i),
     @Uniform i S s (w, st) =
-    if st == s then @r (fin_family i) (F_w0 i) else 0.
+    if st == s then @r (fin_family i) else 0.
 Proof.
   (* move=> st w. rewrite /Uniform /=. *)
   (* case bb : (st == s). *)
@@ -121,9 +113,9 @@ Proof.
     exact: R.
 Qed.
 
-Definition f_dprod { F1 F2: finType } { S1 S2 : choiceType } { w0 : F1 } { w0' : F2 } {s1 : S1 } {s2 : S2}
+Definition f_dprod { F1 F2: finType } { S1 S2 : choiceType } {s1 : S1 } {s2 : S2}
             (f : F1 -> F2) : (F1 * S1) * (F2 * S2) -> R :=
-fun '((w1,st1),(w2, st2)) => if  ((st1 == s1) && (st2 == s2) && ((f w1) == w2)) then (@r F1 w0) else 0.
+fun '((w1,st1),(w2, st2)) => if  ((st1 == s1) && (st2 == s2) && ((f w1) == w2)) then (@r F1) else 0.
 
 Lemma item_addr0_mulr :
   forall n x,
@@ -138,10 +130,10 @@ Proof.
 Qed.
 
 Lemma bijective_isdistr
-  {F1 F2 : finType} {w0 : F1} {w0' : F2}
+  {F1 F2 : finType}
   {S1 S2 : choiceType} {s1 : S1} {s2 : S2}
   {f : F1 -> F2} (f_bij : bijective f) :
-  isdistr (@f_dprod F1 F2 S1 S2 w0 w0' s1 s2 f).
+  isdistr (@f_dprod F1 F2 S1 S2 s1 s2 f).
 Proof.
   rewrite /f_dprod.
   split.
@@ -217,30 +209,24 @@ Proof.
     subst I. rewrite size_map in e3.
     rewrite -cardE in e3.
     rewrite item_addr0_mulr.
-    eapply Order.POrderTheory.le_trans with (y := @r _ w0 *~ #|F1|).
+    eapply Order.POrderTheory.le_trans with (y := @r F1 *~ #|F1|).
     + rewrite -mulrzr. rewrite -[X in _<=X]mulrzr.
-      rewrite ler_pM2l.
-      * rewrite ler_int. auto.
-      * unfold r. apply mulr_gt0.
-        -- cbn. exact ltr01.
-        -- rewrite -(@pmulr_rgt0 _ #|F1|%:~R).
-            ++ rewrite -(GRing.mul1r (#|F1|%:~R / #|F1|%:~R)).
-              rewrite GRing.mulrA.
-              rewrite GRing.Theory.mulfK.
-              ** exact ltr01.
-              ** unshelve eapply card_non_zero. auto.
-            ++ eapply fintype0 in w0 as h.
-              destruct #|F1| eqn:e. 1: contradiction.
-              rewrite ltr0n. reflexivity.
+
+      rewrite ler_wpM2l //; swap 1 2.
+      * rewrite ler_int; auto.
+      * apply r_nonneg.
     + unfold r. rewrite -[X in X <= _]mulrzr. rewrite GRing.div1r.
+      destruct (#|F1|) eqn:E.
+      { by rewrite GRing.mulr0. }
+      rewrite -E.
       rewrite -[X in X <= _]GRing.mulr1 -GRing.mulrA.
       rewrite GRing.Theory.mulKf.
       * auto.
-      * unshelve eapply card_non_zero. auto.
+      * by rewrite E intr_eq0.
 Qed.
 
 
-Definition UniformFsq_f { F1 F2 : finType} { w0 : F1 } { w0' : F2 }
+Definition UniformFsq_f { F1 F2 : finType}
                         { S1 S2 : choiceType } { s1 : S1 } { s2 : S2 }
                         {f : F1 -> F2} (f_bij : bijective f):
   SDistr (ChoiceAsOrd.F_choice_prod ⟨ ChoiceAsOrd.F_choice_prod ⟨ (F1:choiceType) , S1 ⟩ ,
@@ -248,7 +234,7 @@ Definition UniformFsq_f { F1 F2 : finType} { w0 : F1 } { w0' : F2 }
 Proof.
   unshelve eapply mkdistr.
   1:{
-    exact: (@f_dprod F1 F2 S1 S2 w0 w0' s1 s2 f).
+    exact: (@f_dprod F1 F2 S1 S2 s1 s2 f).
   }
   by apply: bijective_isdistr.
 Defined.
@@ -256,11 +242,11 @@ Defined.
 
 Definition UniformSQ { i j : Index } { S1 S2 : choiceType } (s1 : S1) (s2 : S2)
                       { f : fin_family i -> fin_family j } (f_bij : bijective f) :=
-  @UniformFsq_f (fin_family i) (fin_family j) (F_w0 i) (F_w0 j) S1 S2 s1 s2 f f_bij.
+  @UniformFsq_f (fin_family i) (fin_family j) S1 S2 s1 s2 f f_bij.
 
 
-Lemma bij_same_r { F1 F2 : finType } { w0 : F1 } { w0' : F2 } { f : F1 -> F2 }
-      ( bij_f : bijective f ) : @r F1 w0 = @r F2 w0'.
+Lemma bij_same_r { F1 F2 : finType } { f : F1 -> F2 }
+      ( bij_f : bijective f ) : @r F1 = @r F2.
 Proof.
   unfold r. f_equal. f_equal. f_equal.
   erewrite <- on_card_preimset with (f := f).
@@ -304,7 +290,7 @@ Proof.
     have Hf: (f (f_inv w2) = w2) by apply: (Kf2 w2).
     have Hs: s1 == s1 by apply /eqP.
     rewrite Hf Hs /= refl_true Bool.andb_true_r Uniform_eval.
-    rewrite (@bij_same_r (fin_family i) (fin_family j) (F_w0 i) w2 f).
+    rewrite (@bij_same_r (fin_family i) (fin_family j) f).
     reflexivity.
     by exists f_inv.
     move => [w1 st1] /= Hneq.

@@ -242,8 +242,8 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       [fmap challenge_loc ; response_loc ].
 
     Definition setup_loc := mkloc 10 (false : bool).
-    Definition statement_loc := mkloc 11 (pos0 : choiceStatement).
-    Definition witness_loc := mkloc 12 (pos0 : choiceWitness).
+    Definition statement_loc := mkloc 11 (@pos0 _ Statement_pos).
+    Definition witness_loc := mkloc 12 (@pos0 _ Witness_pos).
     Definition KEY_locs : Locations := [fmap setup_loc; witness_loc ; statement_loc].
 
     Definition choiceOpen := (chProd choiceChallenge choiceResponse).
@@ -495,7 +495,7 @@ Module SigmaProtocol (π : SigmaProtocolParams)
         ssprove_code_simpl.
         ssprove_code_simpl_more.
         ssprove_sync=>b.
-        case (Nat.even b) eqn:Hb ; rewrite Hb.
+        case (Nat.even b).
         + ssprove_sync=> setup.
           ssprove_code_simpl.
           ssprove_code_simpl_more.

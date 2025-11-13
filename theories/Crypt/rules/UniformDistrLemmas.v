@@ -44,17 +44,9 @@ Import Order.POrderTheory.
 Local Open Scope ring_scope.
 
 
-Lemma card_non_zero {F : finType} {w0 : F} : #|F|%:~R != 0 :> R.
-Proof.
-  eapply fintype0 in w0 as h.
-  apply /negP. intro n. eapply h.
-  rewrite intr_eq0 in n. move: n => /eqP n.
-  inversion n. reflexivity.
-Qed.
+Definition r { F : finType} : R := (1%:~R) / ((#|F|)%:~R).
 
-Definition r { F : finType} { w0 : F } : R := (1%:~R) / ((#|F|)%:~R).
-
-Lemma r_nonneg { F : finType} { w0 : F } : 0 <= (@r F w0).
+Lemma r_nonneg { F : finType} : 0 <= (@r F).
 Proof.
   rewrite /r.
   apply: divr_ge0; by apply: ler0n.
@@ -112,21 +104,22 @@ Proof.
   intro. rewrite mem_enum. reflexivity.
 Qed.
 
-Lemma is_uniform {F : finType} (w0 : F) : isdistr (fun w : F => (@r F w0)).
+Lemma is_uniform {F : finType} : isdistr (fun w : F => (@r F)).
 Proof.
   split.
   - move => w; apply: r_nonneg.
   - move => J uniq_J. apply /idP.
     apply: le_trans.
-    -- by apply: (cardinality_bound J uniq_J r r_nonneg).
-    -- rewrite /r -GRing.invf_div GRing.divr1 GRing.divff.
-         by [].
-         exact (@card_non_zero F w0).
+    + by apply: (cardinality_bound J uniq_J r r_nonneg).
+    + destruct (#|F|) eqn:E.
+      * by rewrite GRing.mul0r.
+      * rewrite -E /r -GRing.invf_div GRing.divr1 GRing.divff //.
+        by rewrite E intr_eq0.
 Qed.
 
-Definition f_dprod { F : finType} { w0 : F } (f : F -> F) : F * F -> R :=
+Definition f_dprod { F : finType} (f : F -> F) : F * F -> R :=
   fun w =>
-    if ((f (fst w)) == (snd w)) then (@r F w0) else 0.
+    if ((f (fst w)) == (snd w)) then (@r F) else 0.
 
 Lemma sum_oneq_eq :
   ∀ {I : eqType} (r : seq I) (P : pred I) (F G : I → R),
@@ -231,10 +224,10 @@ Proof.
 Qed.
 
 (* the uniform distribution over F *)
-Definition uniform_F { F : finType} { w0 : F } : SDistr _ := mkdistr (@is_uniform F w0).
+Definition uniform_F { F : finType} : SDistr _ := mkdistr (@is_uniform F).
 
-Lemma bijective_isdistr { F : finType} { w0 : F } {f : F -> F} (Hbij : bijective f) :
-  isdistr (@f_dprod F w0 f).
+Lemma bijective_isdistr { F : finType} {f : F -> F} (Hbij : bijective f) :
+  isdistr (@f_dprod F f).
 Proof.
   rewrite /f_dprod. split.
   move => [w1 w2].
@@ -247,16 +240,18 @@ Proof.
     -- move => [t1 t2] /=.
        destruct (f t1 == t2) eqn:Heq; auto. exact r_nonneg.
     -- rewrite sum_prod_bij.
+       2: by move => w; exact r_nonneg.
+       destruct (#|F|) eqn:E.
+       1: rewrite sumr_const E GRing.mulr0 //.
        rewrite sumr_const /r -GRing.invf_div GRing.divr1 GRing.mulVf. auto.
-       exact (@card_non_zero F w0).
-       by move => w; exact r_nonneg.
+       by rewrite E intr_eq0.
 Qed.
 
-Definition sampleFsq_f { F : finType} { w0 : F } {f : F -> F} (f_bij : bijective f) : SDistr _ :=
-  (mkdistr (@bijective_isdistr F w0 f f_bij)).
+Definition sampleFsq_f { F : finType} {f : F -> F} (f_bij : bijective f) : SDistr _ :=
+  (mkdistr (@bijective_isdistr F f f_bij)).
 
-Lemma sampleFsq_f_coupling { F : finType} { w0 : F } { f : F -> F } (f_bij : bijective f):
-  coupling (@sampleFsq_f F w0 f f_bij) (@uniform_F F w0) (@uniform_F F w0).
+Lemma sampleFsq_f_coupling { F : finType} { f : F -> F } (f_bij : bijective f):
+  coupling (@sampleFsq_f F f f_bij) (@uniform_F F) (@uniform_F F).
 Proof.
   destruct f_bij as [f_inv K1 K2].
   rewrite /sampleFsq_f /f_dprod; split; apply: distr_ext => w /=.
@@ -286,10 +281,10 @@ Proof.
        exact r_nonneg.
 Qed.
 
-Lemma sampleFsq_support { F : finType} { w0 : F }
+Lemma sampleFsq_support { F : finType}
                         {a1 a2 : F} {f : F -> F}
                         (f_bij : bijective f)
-                        (H : 0 < (@sampleFsq_f F w0 f f_bij) (a1, a2)) : f a1 == a2.
+                        (H : 0 < (@sampleFsq_f F f f_bij) (a1, a2)) : f a1 == a2.
 Proof.
   simpl in H. rewrite /f_dprod /= in H.
   case (f a1 == a2) eqn:Heq; auto.
@@ -342,14 +337,13 @@ Section prod_uniform.
     SDistr_unit A a.
 
   Context {X Y : finType}.
-  Context {x0 : X} {y0 : Y}.
 
-  Arguments r _ {_}.
+  Arguments r _ : clear implicits.
 
   Lemma prod_uniform :
-    @uniform_F (prod_finType X Y) (x0,y0) =
-    SD_bind (@uniform_F X x0) (fun x =>
-    SD_bind (@uniform_F Y y0) (fun y =>
+    @uniform_F (prod_finType X Y) =
+    SD_bind (@uniform_F X) (fun x =>
+    SD_bind (@uniform_F Y) (fun y =>
     SD_ret (x,y))).
   Proof.
     apply distr_ext. move=> [x y].

@@ -45,7 +45,7 @@ Inductive choice_type :=
 | chProd (A B : choice_type)
 | chMap (A B : choice_type)
 | chOption (A : choice_type)
-| chFin (n : positive)
+| chFin (n : nat)
 | chWord (nbits : wsize)
 | chList (A : choice_type)
 | chSum (A B : choice_type).
@@ -88,7 +88,7 @@ HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
   := hasInterp.Build (chOption A) (option T).
 
 HB.instance Definition _ n
-  := hasInterp.Build (chFin n) (ordinal n.(pos)).
+  := hasInterp.Build (chFin n) 'I_n.
 
 #[non_forgetful_inheritance]
 HB.instance Definition _ nbits
@@ -110,7 +110,7 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
   | chProd u v => (chInterp u * chInterp v)%type
   | chMap u v => {fmap chInterp u → chInterp v}
   | chOption u => option (chInterp u)
-  | chFin n => ordinal n.(pos)
+  | chFin n => 'I_n
   | chWord nbits => word nbits
   | chList u => list (chInterp u)
   | chSum u v => (chInterp u + chInterp v)%type
@@ -121,7 +121,7 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
    choice_type. This allows us to use this coercion in reverse. *)
 #[reversible] Coercion chInterp : choice_type >-> Crypt.type.
 
-Definition pos0 {n} `{H : Positive n} : chFin (mkpos n) := Ordinal H.
+Definition pos0 {n} `{H : Positive n} : chFin n := Ordinal H.
 
 Definition coerce {A B : choice_type} : A → option B
   := λ x, unpickle (pickle x).
