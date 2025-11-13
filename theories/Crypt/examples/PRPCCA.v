@@ -89,10 +89,10 @@ Qed.
   integer less than the size of the set, and then pick the corresponding
   element.
 *)
-Definition sample_subset {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)): 'fin n :=
-  nth pos0 r (nat_of_ord k).
+Definition sample_subset {n} {r: seq 'I_n} (k: 'I_(size r)): 'fin n :=
+  tnth (in_tuple r) k.
 
-Lemma sample_subset_in {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)):
+Lemma sample_subset_in {n} {r: seq 'I_n} (k: 'I_(size r)):
   sample_subset k \in r.
 Proof.
   by apply: mem_nth.

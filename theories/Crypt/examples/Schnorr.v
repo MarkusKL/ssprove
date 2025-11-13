@@ -63,8 +63,6 @@ Module MyParam <: SigmaProtocolParams.
     prod (prod Message Challenge) Response.
 
   Definition w0 : Witness := 0.
-  Definition e0 : Challenge := 0.
-  Definition z0 : Response := 0.
 
   Definition R : Statement -> Witness -> bool :=
     (λ (h : Statement) (w : Witness), h == (g ^+ w)).
@@ -78,23 +76,12 @@ Module MyParam <: SigmaProtocolParams.
   Proof.
     apply /card_gt0P. exists w0. auto.
   Qed.
-
-  Definition Statement_pos : Positive #|Statement| := _.
-  Definition Message_pos : Positive #|Message| := _.
   Definition Challenge_pos : Positive #|Challenge| := _.
-  Definition Response_pos : Positive #|Response| := _.
-  Definition Bool_pos : Positive #|'bool|.
-  Proof.
-    rewrite card_bool. done.
-  Defined.
-
 End MyParam.
 
 Module MyAlg <: SigmaProtocolAlgorithms MyParam.
 
   Import MyParam.
-
-  #[local] Existing Instance Bool_pos.
 
   Definition choiceWitness : choice_type := 'fin #|Witness|.
   Definition choiceStatement : choice_type := 'fin #|Statement|.
@@ -109,7 +96,7 @@ Module MyAlg <: SigmaProtocolAlgorithms MyParam.
 
   Definition i_witness := #|Witness|.
 
-  Definition commit_loc := mkloc 2 (pos0 : choiceWitness).
+  Definition commit_loc := mkloc 2 (fto 1 : choiceWitness).
 
   Definition Sigma_locs : Locations := [fmap commit_loc].
   Definition Simulator_locs : Locations := emptym.
@@ -468,7 +455,7 @@ Proof.
   simplify_linking.
   destruct hwe as [e e'].
   apply r_const_sample_R.
-  1: apply LosslessOp_uniform, i_challenge_pos.
+  1: apply LosslessOp_uniform, Challenge_pos.
   intros e_rand.
   ssprove_code_simpl.
   ssprove_code_simpl_more.

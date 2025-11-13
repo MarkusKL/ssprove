@@ -53,6 +53,8 @@ Section PRF_example.
   Definition Key_N_pos : Positive Key_N := _.
   Definition Key : choice_type := chFin Key_N.
 
+  Definition Words0 : Words := cast_ord (word.prednK_modulus _) ord0. 
+
   (* TW: Is this normal that this definition is so big? *)
   #[program] Definition plus : Words → Key → Words :=
     λ w k,
@@ -165,8 +167,8 @@ Section PRF_example.
   #[local] Open Scope package_scope.
 
   Definition key_location := mkloc 0 (None : option Key).
-  Definition plain_location := mkloc 1 (pos0 : Words).
-  Definition cipher_location := mkloc 2 (pos0 : Words).
+  Definition plain_location := mkloc 1 (Words0 : Words).
+  Definition cipher_location := mkloc 2 (Words0 : Words).
   Definition i0 : nat := 3.
   Definition i1 : nat := 4.
   Definition i2 : nat := 5.

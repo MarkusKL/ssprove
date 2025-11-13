@@ -121,8 +121,6 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
    choice_type. This allows us to use this coercion in reverse. *)
 #[reversible] Coercion chInterp : choice_type >-> Crypt.type.
 
-Definition pos0 {n} `{H : Positive n} : chFin n := Ordinal H.
-
 Definition coerce {A B : choice_type} : A → option B
   := λ x, unpickle (pickle x).
 

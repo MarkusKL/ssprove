@@ -33,20 +33,9 @@ Import PackageNotation.
 #[local] Open Scope ring_scope.
 
 Module Type SigmaProtocolParams.
-
   Parameter Witness Statement Message Challenge Response : finType.
   Parameter w0 : Witness.
-  Parameter e0 : Challenge.
-  Parameter z0 : Response.
   Parameter R : Statement → Witness → bool.
-
-  Parameter Statement_pos : Positive #|Statement|.
-  Parameter Witness_pos : Positive #|Witness|.
-  Parameter Message_pos : Positive #|Message|.
-  Parameter Challenge_pos : Positive #|Challenge|.
-  Parameter Response_pos : Positive #|Response|.
-  Parameter Bool_pos : Positive #|'bool|.
-
 End SigmaProtocolParams.
 
 Module Type SigmaProtocolAlgorithms (π : SigmaProtocolParams).
@@ -54,13 +43,6 @@ Module Type SigmaProtocolAlgorithms (π : SigmaProtocolParams).
   Import π.
 
   #[local] Open Scope package_scope.
-
-  #[local] Existing Instance Bool_pos.
-  #[local] Existing Instance Statement_pos.
-  #[local] Existing Instance Witness_pos.
-  #[local] Existing Instance Message_pos.
-  #[local] Existing Instance Challenge_pos.
-  #[local] Existing Instance Response_pos.
 
   Definition choiceWitness := 'fin #|Witness|.
   Definition choiceStatement := 'fin #|Statement|.
@@ -137,21 +119,6 @@ Module SigmaProtocol (π : SigmaProtocolParams)
   Definition VER : nat := 2.
   Definition ADV : nat := 3.
   Definition SOUNDNESS : nat := 4.
-
-  Definition i_challenge_pos : Positive i_challenge.
-  Proof.
-    unfold i_challenge.
-    apply Challenge_pos.
-  Qed.
-
-  Definition i_witness_pos : Positive i_witness.
-  Proof.
-    unfold i_witness.
-    apply Witness_pos.
-  Qed.
-
-  #[local] Existing Instance i_challenge_pos.
-  #[local] Existing Instance i_witness_pos.
 
   #[local] Open Scope package_scope.
 
@@ -242,8 +209,8 @@ Module SigmaProtocol (π : SigmaProtocolParams)
       [fmap challenge_loc ; response_loc ].
 
     Definition setup_loc := mkloc 10 (false : bool).
-    Definition statement_loc := mkloc 11 (@pos0 _ Statement_pos).
-    Definition witness_loc := mkloc 12 (@pos0 _ Witness_pos).
+    Definition statement_loc := mkloc 11 (KeyGen (fto w0) : choiceStatement).
+    Definition witness_loc := mkloc 12 (fto w0 : choiceWitness).
     Definition KEY_locs : Locations := [fmap setup_loc; witness_loc ; statement_loc].
 
     Definition choiceOpen := (chProd choiceChallenge choiceResponse).
@@ -703,20 +670,8 @@ Module SigmaProtocol (π : SigmaProtocolParams)
   (* The main difference is that the random oracle is a query parametrized by the context of the execution. *)
 
   Module OracleParams <: ROParams.
-
     Definition Query : finType := prod Statement Message.
     Definition Random := Challenge.
-
-    Definition Query_pos : Positive #|Query|.
-    Proof.
-      unfold Query. rewrite !card_prod.
-      apply Positive_prod.
-      - apply Statement_pos.
-      - apply Message_pos.
-    Qed.
-
-    Definition Random_pos : Positive #|Random| := Challenge_pos.
-
   End OracleParams.
 
   Module Oracle := RO OracleParams.

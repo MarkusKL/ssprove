@@ -51,7 +51,6 @@ End GroupParam.
 
 Module Type DDHParams.
   Parameter Space : finType.
-  Parameter Space_pos : Positive #|Space|.
 End DDHParams.
 
 Module DDH (DDHP : DDHParams) (GP : GroupParam).
@@ -61,55 +60,34 @@ Module DDH (DDHP : DDHParams) (GP : GroupParam).
 
   Definition SAMPLE := 0%N.
 
-  #[local] Existing Instance Space_pos.
-
-  Definition GroupSpace : finType := gT.
-  #[local] Instance GroupSpace_pos : Positive #|GroupSpace|.
-  Proof.
-    apply /card_gt0P; by exists g.
-  (* Needs to be transparent to unify with local positivity proof? *)
-  Defined.
-
-  Definition chGroup : choice_type := 'fin #|GroupSpace|.
+  Definition chGroup : choice_type := 'fin #|gT|.
 
   Definition i_space := #|Space|.
   Definition chElem : choice_type := 'fin #|Space|.
 
   Notation " 'group " := (chGroup) (in custom pack_type at level 2).
 
-  Definition secret_loc1 := mkloc 33 (pos0 : chElem).
-  Definition secret_loc2 := mkloc 34 (pos0 : chElem).
-  Definition secret_loc3 := mkloc 35 (pos0 : chElem).
-
-  Definition DDH_locs :=
-    [fmap secret_loc1 ; secret_loc2 ; secret_loc3].
-
   Definition DDH_E := [interface #val #[ SAMPLE ] : 'unit → 'group × 'group × 'group ].
 
   Definition DDH_real :
     package [interface] DDH_E :=
-      [package DDH_locs ;
+      [package emptym ;
         #def #[ SAMPLE ] (_ : 'unit) : 'group × 'group × 'group
         {
           a ← sample uniform i_space ;;
           b ← sample uniform i_space ;;
-          #put secret_loc1 := a ;;
-          #put secret_loc2 := b ;;
           ret (fto (g^+ a), (fto (g^+ b), fto (g^+(a * b))))
         }
       ].
 
   Definition DDH_ideal :
     package [interface] DDH_E :=
-      [package DDH_locs ;
+      [package emptym ;
         #def #[ SAMPLE ] (_ : 'unit) : 'group × 'group × 'group
         {
           a ← sample uniform i_space ;;
           b ← sample uniform i_space ;;
           c ← sample uniform i_space ;;
-          #put secret_loc1 := a ;;
-          #put secret_loc2 := b ;;
-          #put secret_loc3 := c ;;
           ret (fto (g^+a), (fto (g^+b), fto (g^+c)))
         }
       ].
