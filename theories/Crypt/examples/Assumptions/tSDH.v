@@ -61,21 +61,9 @@ Module tSDH (GP : GroupParam).
 
   Definition GroupSpace : finType := gT.
 
-  #[local] Instance GroupSpace_pos : Positive #|GroupSpace|.
-  Proof.
-    apply /card_gt0P; by exists g.
-  Defined.
-
-  #[local] Instance order_pos : Positive #[g].
-  Proof.
-    move : prime_order => /prime_gt1 Hprime.
-    unfold Positive. auto.
-  Qed.
-
   Definition gt_than_1 : (#[g] > 1)%N.
   Proof.
-    move : prime_order => /prime_gt1 Hprime.
-    unfold Positive. auto.
+    move : prime_order => /prime_gt1 Hprime. auto.
   Qed.
 
   Definition chGroup : choice_type := 'fin #|GroupSpace|.

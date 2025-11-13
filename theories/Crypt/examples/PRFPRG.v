@@ -51,7 +51,7 @@ Definition Word: choice_type := 'fin Word_N.
 #[program]
 Definition zero: Word := @Ordinal _ 0 _.
 Next Obligation.
-  by apply: PositiveExp2.
+  by rewrite /Word_N -word.prednK_modulus .
 Qed.
 
 #[program]
@@ -60,7 +60,7 @@ Next Obligation.
   rewrite /Word_N.
   move: Hpos.
   case: n => [// | n'] _.
-  by rewrite expnS leq_pmulr // PositiveExp2.
+  by rewrite expnS -word.prednK_modulus mulnS.
 Qed.
 
 Notation " 'word " := (Word) (in custom pack_type at level 2).

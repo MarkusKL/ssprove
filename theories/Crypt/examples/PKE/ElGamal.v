@@ -62,10 +62,10 @@ Proof.
   apply eq_rel_perf_ind_eq.
   simplify_eq_rel m.
   apply r_const_sample_L.
-  1: apply LosslessOp_uniform, Positive_exp.
+  1: apply LosslessOp_uniform; apply /card_gt0P; by exists 0%R.
   intros sk.
   apply r_const_sample_L.
-  1: apply LosslessOp_uniform, Positive_exp.
+  1: apply LosslessOp_uniform; apply /card_gt0P; by exists 0%R.
   intros r.
   apply r_ret => s0 s1.
   split; subst; [| done ].

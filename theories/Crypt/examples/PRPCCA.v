@@ -108,7 +108,7 @@ Qed.
   which is the only reasonable way to handle the case. (In fact, [#assert] is
   implemented as sampling from an empty distribution.)
 *)
-Definition samp_no_repl {n} `{Positive n} {L} (r: {fset ('fin n)}): code L [interface] ('fin n) :=
+Definition samp_no_repl {n} {L} (r: {fset ('fin n)}): code L [interface] ('fin n) :=
   {code
     let r' := compl r in
     #assert (0 < size r') ;;
@@ -138,10 +138,12 @@ Definition Ciph: choice_type := 'fin Ciph_N.
 Definition ciph_to_pair (c: Ciph): Word * Key :=
   (@Ordinal _ (c %% Word_N) _, @Ordinal _ (c %/ Word_N) _).
 Next Obligation.
-  by rewrite ltn_mod PositiveExp2.
+  by rewrite ltn_mod /Word_N -word.prednK_modulus.
 Qed.
 Next Obligation.
-  by rewrite ltn_divLR ?PositiveExp2 // -expnD addnC.
+  rewrite ltn_divLR.
+  - by rewrite -expnD addnC.
+  - by rewrite /Word_N -word.prednK_modulus.
 Qed.
 
 #[program]
@@ -150,7 +152,7 @@ Definition mkciph (m: Word) (r: Key): Ciph :=
 Next Obligation.
   apply: (@leq_trans (r * Word_N + Word_N)).
   - by rewrite ltn_add2l.
-  - by rewrite /Ciph_N expnD addnC -mulSn mulnC leq_pmul2l ?PositiveExp2.
+  - by rewrite /Ciph_N expnD addnC -mulSn mulnC leq_pmul2l // /Word_N -word.prednK_modulus.
 Qed.
 
 Lemma mkciph_ciph_to_pair (c: Ciph):
@@ -168,7 +170,7 @@ Proof.
   f_equal.
   all: apply: ord_inj => /=.
   - by rewrite modnMDl modn_small.
-  - by rewrite divnMDl ?PositiveExp2 ?divn_small ?addn0.
+  - by rewrite divnMDl ?divn_small ?addn0 // /Word_N -word.prednK_modulus.
 Qed.
 
 Lemma mkciph_eq (m m': Word) (r r': Key):
@@ -217,7 +219,7 @@ Definition invlookup: nat := 10.
   The [SAMP] packages define sampling with ([true]), and without ([false])
   replacement.
 *)
-Definition SAMP_pkg_tt (p: nat) `{Positive p}:
+Definition SAMP_pkg_tt (p: nat) :
   package [interface]
     [interface
       #val #[samp]: 'set ('fin p) → ('fin p) ] :=
@@ -228,7 +230,7 @@ Definition SAMP_pkg_tt (p: nat) `{Positive p}:
     }
   ].
 
-Definition SAMP_pkg_ff (p: nat) `{Positive p}:
+Definition SAMP_pkg_ff (p: nat) :
   package [interface]
     [interface
       #val #[samp]: 'set ('fin p) → ('fin p) ] :=
@@ -239,7 +241,7 @@ Definition SAMP_pkg_ff (p: nat) `{Positive p}:
     }
   ].
 
-Definition SAMP (p: nat) `{Positive p} b :=
+Definition SAMP (p: nat) b :=
   if b then (SAMP_pkg_tt p) else (SAMP_pkg_ff p).
 
 Definition kgen: raw_code 'key :=

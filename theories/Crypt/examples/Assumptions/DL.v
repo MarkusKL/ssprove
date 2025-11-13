@@ -51,7 +51,6 @@ End GroupParam.
 
 Module Type DLParams.
   Parameter Space : finType.
-  Parameter Space_pos : Positive #|Space|.
 End DLParams.
 
 Module DL (DLP : DLParams) (GP : GroupParam).
@@ -62,15 +61,7 @@ Module DL (DLP : DLParams) (GP : GroupParam).
   Definition set_up := 0%N.
   Definition guess := 1%N.
 
-  #[local] Existing Instance Space_pos.
-
   Definition GroupSpace : finType := gT.
-  #[local] Instance GroupSpace_pos : Positive #|GroupSpace|.
-  Proof.
-    apply /card_gt0P; by exists g.
-  (* Needs to be transparent to unify with local positivity proof? *)
-  Defined.
-
   Definition chGroup : choice_type := 'fin #|GroupSpace|.
 
   Definition i_space := #|Space|.
