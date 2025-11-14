@@ -171,10 +171,7 @@ we usually style them with a quotation mark in front of the type they represent.
 This is the case for instance of `'nat`, `'bool`, `'unit` and `'option` which
 are self-explanatory.
 
-We also provide `'fin n` which is the *inhabited* finite type of size `n`.
-Under the hood, Coq will attempt to prove that `n` is non-zero.
-In case it fails, the user should provide instances or hints for the
-`Positive` type-class.
+We also provide `'fin n` which is the finite type of size `n`.
 
 We also have the product type `chProd x y` which is interpreted to Coq's
 product `prod`. For instance `chProd 'nat 'bool` corresponds to `nat * bool`.
@@ -211,8 +208,7 @@ in `mathcomp-analysis` provided that its support is in `choice_type`.
 Writing them by hand might not be very convenient.
 
 For the time being we provide `uniform n` which represents a uniform
-distribution landing in `'fin n`. As such `n` must be positive
-(Coq will look for an instance of `Positive n`).
+distribution landing in `'fin n` as long as `0 < n`.
 
 ### Valid code
 
