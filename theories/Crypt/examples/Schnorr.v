@@ -66,17 +66,6 @@ Module MyParam <: SigmaProtocolParams.
 
   Definition R : Statement -> Witness -> bool :=
     (λ (h : Statement) (w : Witness), h == (g ^+ w)).
-
-  #[export] Instance positive_gT : Positive #|gT|.
-  Proof.
-    apply /card_gt0P. exists g. auto.
-  Qed.
-
-  #[export] Instance Witness_pos : Positive #|Witness|.
-  Proof.
-    apply /card_gt0P. exists w0. auto.
-  Qed.
-  Definition Challenge_pos : Positive #|Challenge| := _.
 End MyParam.
 
 Module MyAlg <: SigmaProtocolAlgorithms MyParam.
@@ -454,13 +443,11 @@ Proof.
   ssprove_code_simpl.
   simplify_linking.
   destruct hwe as [e e'].
-  apply r_const_sample_R.
-  1: apply LosslessOp_uniform, Challenge_pos.
+  apply r_const_sample_R; [ exact _ |].
   intros e_rand.
   ssprove_code_simpl.
   ssprove_code_simpl_more.
-  apply r_const_sample_L.
-  1: by apply LosslessOp_uniform.
+  apply r_const_sample_L; [ exact _ |].
   intros b.
   simpl.
   case (Nat.even b).
