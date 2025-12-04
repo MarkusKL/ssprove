@@ -132,7 +132,7 @@ Module PackageNotation.
 
 
   Notation " 'fin n " :=
-    (chFin (mkpos n))
+    (chFin n)
     (in custom pack_type at level 2, n constr).
 
   Notation "{map x → y }" :=
@@ -154,7 +154,7 @@ Module PackageNotation.
   Notation " 'list x " := (chList x) (at level 2) : package_scope.
 
   Notation " 'fin x " :=
-    (chFin (mkpos x))
+    (chFin x)
     (at level 2) : package_scope.
 
   (* Conflicts with this one. *)

@@ -151,12 +151,6 @@ From SSProve.Crypt Require Import NominalPrelude.
 Import PackageNotation.
 #[local] Open Scope package_scope.
 
-#[export] Instance Positive_el {G} : Positive #|el G|.
-Proof. apply /card_gt0P. by exists 1. Qed.
-
-#[export] Instance Positive_exp {G} : Positive #|exp G|.
-Proof. apply /card_gt0P. by exists 0. Qed.
-
 Notation " 'el G " := 'fin #|el G|
   (at level 3) : package_scope.
 

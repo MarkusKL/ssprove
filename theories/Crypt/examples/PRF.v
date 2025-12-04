@@ -47,11 +47,11 @@ Section PRF_example.
   Context (n : nat).
 
   Definition Words_N : nat := 2^n.
-  Definition Words_N_pos : Positive Words_N := _.
-  Definition Words : choice_type := chFin (mkpos Words_N).
+  Definition Words : choice_type := chFin Words_N.
   Definition Key_N : nat := 2^n.
-  Definition Key_N_pos : Positive Key_N := _.
-  Definition Key : choice_type := chFin (mkpos Key_N).
+  Definition Key : choice_type := chFin Key_N.
+
+  Definition Words0 : Words := cast_ord (word.prednK_modulus _) ord0. 
 
   (* TW: Is this normal that this definition is so big? *)
   #[program] Definition plus : Words → Key → Words :=
@@ -164,15 +164,14 @@ Section PRF_example.
 
   #[local] Open Scope package_scope.
 
-  Definition key_location : Location := (0, 'option Key).
-  Definition plain_location : Location := (1, Words).
-  Definition cipher_location : Location := (2, Words).
+  Definition key_location := mkloc 0 (None : option Key).
+  Definition plain_location := mkloc 1 (Words0 : Words).
+  Definition cipher_location := mkloc 2 (Words0 : Words).
   Definition i0 : nat := 3.
   Definition i1 : nat := 4.
   Definition i2 : nat := 5.
-  Definition salt_location : Location := (6, 'nat).
-  Definition table_location : Location :=
-    (7, chMap 'nat ('fin (2^n)%N)).
+  Definition salt_location := mkloc 6 (0 : nat).
+  Definition table_location := mkloc 7 (emptym : {fmap nat → Words}).
 
   Context (PRF : Words → Key → Key).
 

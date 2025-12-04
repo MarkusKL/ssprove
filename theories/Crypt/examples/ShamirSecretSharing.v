@@ -118,7 +118,6 @@ Notation " 'set t " := (chSet t) (at level 2): package_scope.
 
 (* [n] is the number of shares.                                               *)
 Variable (n: nat).
-Context (n_positive: Positive n).
 
 (* We cannot possibly have more than [p-1] shares.                            *)
 Context (n_ltn_p: n < p).
@@ -280,12 +279,6 @@ Proof.
   by rewrite /tail_poly polyseq0 GRing.addr0.
 Qed.
 
-
-Instance p_pow_positive t:
-  Positive (p ^ t).
-Proof.
-  by rewrite /Positive expn_gt0 prime_gt0.
-Qed.
 
 (******************************************************************************)
 (**************Definition and lemmas for polynomials in SSProve****************)

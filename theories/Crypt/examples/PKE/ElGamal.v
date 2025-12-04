@@ -61,11 +61,9 @@ Proof.
   eapply prove_perfect.
   apply eq_rel_perf_ind_eq.
   simplify_eq_rel m.
-  apply r_const_sample_L.
-  1: apply LosslessOp_uniform.
+  apply r_const_sample_L; [ exact _ |].
   intros sk.
-  apply r_const_sample_L.
-  1: apply LosslessOp_uniform.
+  apply r_const_sample_L; [ exact _ |].
   intros r.
   apply r_ret => s0 s1.
   split; subst; [| done ].

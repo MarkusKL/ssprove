@@ -58,16 +58,16 @@ Section PRFMAC_example.
 Variable (n: nat).
 
 Definition Word_N: nat := 2^n.
-Definition Word: choice_type := chFin (mkpos Word_N).
+Definition Word: choice_type := chFin Word_N.
 
 Notation " 'word " := (Word) (in custom pack_type at level 2).
 Notation " 'word " := (Word) (at level 2): package_scope.
 
 #[local] Open Scope package_scope.
 
-Definition k_loc: Location := (0, 'option 'word).
-Definition T_loc: Location := (1, chMap 'word 'word).
-Definition S_loc: Location := (2, 'set ('word × 'word)).
+Definition k_loc := mkloc 0 (None : option 'word).
+Definition T_loc := mkloc 1 (emptym : chMap 'word 'word).
+Definition S_loc := mkloc 2 (emptym : 'set ('word × 'word)).
 Definition lookup: nat := 3.
 Definition encrypt: nat := 4.
 Definition gettag: nat := 5.

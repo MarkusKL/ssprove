@@ -23,21 +23,13 @@ Import Num.Theory.
 Import PackageNotation.
 
 Module Type ROParams.
-
   Parameter Query : finType.
   Parameter Random : finType.
-
-  Parameter Query_pos : Positive #|Query|.
-  Parameter Random_pos : Positive #|Random|.
-
 End ROParams.
 
 Module RO (π : ROParams).
 
   Import π.
-
-  #[local] Existing Instance Query_pos.
-  #[local] Existing Instance Random_pos.
 
   Definition chQuery := 'fin #|Query|.
   Definition chRandom := 'fin #|Random|.
@@ -48,7 +40,7 @@ Module RO (π : ROParams).
   Definition INIT : nat := 0.
   Definition QUERY : nat := 1.
 
-  Definition queries_loc : Location := (2, chMap chQuery chRandom).
+  Definition queries_loc := mkloc 2 (emptym : {fmap chQuery → chRandom}).
   Definition RO_locs : Locations := [fmap queries_loc].
 
   Definition RO_exports :=

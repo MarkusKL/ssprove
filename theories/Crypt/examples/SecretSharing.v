@@ -63,7 +63,7 @@ Variable (n: nat).
 Definition Word_N: nat := 2^n.
 
 (* We define words to belong to the finite type of size Word_N                *)
-Definition Word: choice_type := chFin (mkpos Word_N).
+Definition Word: choice_type := chFin Word_N.
 
 (******************************************************************************)
 (*******************Definiton of the [plus] obligation.************************)

@@ -45,7 +45,7 @@ Inductive choice_type :=
 | chProd (A B : choice_type)
 | chMap (A B : choice_type)
 | chOption (A : choice_type)
-| chFin (n : positive)
+| chFin (n : nat)
 | chWord (nbits : wsize)
 | chList (A : choice_type)
 | chSum (A B : choice_type).
@@ -88,7 +88,7 @@ HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
   := hasInterp.Build (chOption A) (option T).
 
 HB.instance Definition _ n
-  := hasInterp.Build (chFin n) (ordinal n.(pos)).
+  := hasInterp.Build (chFin n) 'I_n.
 
 #[non_forgetful_inheritance]
 HB.instance Definition _ nbits
@@ -110,7 +110,7 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
   | chProd u v => (chInterp u * chInterp v)%type
   | chMap u v => {fmap chInterp u → chInterp v}
   | chOption u => option (chInterp u)
-  | chFin n => ordinal n.(pos)
+  | chFin n => 'I_n
   | chWord nbits => word nbits
   | chList u => list (chInterp u)
   | chSum u v => (chInterp u + chInterp v)%type
@@ -121,24 +121,8 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
    choice_type. This allows us to use this coercion in reverse. *)
 #[reversible] Coercion chInterp : choice_type >-> Crypt.type.
 
-(* Canonical element in a type of the choice_type *)
-#[program] Fixpoint chCanonical (T : choice_type) : T :=
-  match T with
-  | chUnit => tt
-  | chNat => 0
-  | chInt => 0
-  | chBool => false
-  | chProd A B => (chCanonical A, chCanonical B)
-  | chMap A B => emptym
-  | chOption A => None
-  | chFin n => Ordinal n.(cond_pos)
-  | chWord nbits => word0
-  | chList A => [::]
-  | chSum A B => inl (chCanonical A)
-  end.
+Definition coerce {A B : choice_type} : A → option B
+  := λ x, unpickle (pickle x).
 
-Definition coerce {A B : choice_type} : A → B
-  := λ x, odflt (chCanonical B) (unpickle (pickle x)).
-
-Lemma coerceE {A : choice_type} (a : A) : coerce a = a.
+Lemma coerceE {A : choice_type} (a : A) : coerce a = Some a.
 Proof. rewrite /coerce pickleK //. Qed.

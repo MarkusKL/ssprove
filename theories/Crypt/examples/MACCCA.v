@@ -55,7 +55,7 @@ Notation " 'set t " := (chSet t) (at level 2): package_scope.
 Variable (n: nat).
 
 Definition Word_N: nat := 2^n.
-Definition Word: choice_type := chFin (mkpos Word_N).
+Definition Word: choice_type := chFin Word_N.
 
 Context (mac: Word -> Word -> Word).
 Context (enc: Word -> Word -> Word).
@@ -64,10 +64,10 @@ Context (dec: Word -> Word -> Word).
 Notation " 'word " := (Word) (in custom pack_type at level 2).
 Notation " 'word " := (Word) (at level 2): package_scope.
 
-Definition km_loc: Location := (0, 'option 'word).
-Definition T_loc: Location := (1, 'set ('word × 'word)).
-Definition ek_loc: Location := (2, 'option 'word).
-Definition S_loc: Location := (3, 'set ('word × 'word)).
+Definition km_loc := mkloc 0 (None : option 'word).
+Definition T_loc := mkloc 1 (emptym : 'set ('word × 'word)).
+Definition ek_loc := mkloc 2 (None : option 'word).
+Definition S_loc := mkloc 3 (emptym : 'set ('word × 'word)).
 Definition gettag: nat := 4.
 Definition checktag: nat := 5.
 Definition eavesdrop: nat := 6.
@@ -76,19 +76,21 @@ Definition decrypt: nat := 7.
 Definition TAG_locs_tt := [fmap km_loc].
 Definition TAG_locs_ff := [fmap km_loc; T_loc].
 
+Definition mod (l : Location) := mkloc l.1 (None : option 'word).
+
 Definition kgen (l: Location): raw_code 'word :=
-  k_init ← get (l.1, 'option 'word) ;;
+  k_init ← get mod l ;;
   match k_init with
   | None =>
       k <$ uniform Word_N ;;
-      #put (l.1, 'option 'word) := Some k ;;
+      #put mod l := Some k ;;
       ret k
   | Some k => ret k
   end.
 
-Lemma kgen_valid {L I} (l: nat):
-  fhas L (l, 'option 'word) ->
-  ValidCode L I (kgen (l, 'option 'word )).
+Lemma kgen_valid {L I} (l: Location):
+  fhas L (mod l) ->
+  ValidCode L I (kgen (mod l)).
 Proof.
   move=> H.
   apply: valid_getr => [// | [k|]].

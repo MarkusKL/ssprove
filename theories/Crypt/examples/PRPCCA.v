@@ -89,10 +89,10 @@ Qed.
   integer less than the size of the set, and then pick the corresponding
   element.
 *)
-Definition sample_subset {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)): 'fin n :=
-  nth (chCanonical ('fin n)) r (nat_of_ord k).
+Definition sample_subset {n} {r: seq 'I_n} (k: 'I_(size r)): 'fin n :=
+  tnth (in_tuple r) k.
 
-Lemma sample_subset_in {n} `{Positive n} {r: seq 'I_n} (k: 'I_(size r)):
+Lemma sample_subset_in {n} {r: seq 'I_n} (k: 'I_(size r)):
   sample_subset k \in r.
 Proof.
   by apply: mem_nth.
@@ -108,11 +108,11 @@ Qed.
   which is the only reasonable way to handle the case. (In fact, [#assert] is
   implemented as sampling from an empty distribution.)
 *)
-Definition samp_no_repl {n} `{Positive n} {L} (r: {fset ('fin n)}): code L [interface] ('fin n) :=
+Definition samp_no_repl {n} {L} (r: {fset ('fin n)}): code L [interface] ('fin n) :=
   {code
     let r' := compl r in
-    #assert (0 < size r') as H ;;
-    i <$ @uniform _ H ;;
+    #assert (0 < size r') ;;
+    i <$ @uniform (size r') ;;
     ret (sample_subset i)
   }.
 
@@ -138,10 +138,12 @@ Definition Ciph: choice_type := 'fin Ciph_N.
 Definition ciph_to_pair (c: Ciph): Word * Key :=
   (@Ordinal _ (c %% Word_N) _, @Ordinal _ (c %/ Word_N) _).
 Next Obligation.
-  by rewrite ltn_mod PositiveExp2.
+  by rewrite ltn_mod /Word_N -word.prednK_modulus.
 Qed.
 Next Obligation.
-  by rewrite ltn_divLR ?PositiveExp2 // -expnD addnC.
+  rewrite ltn_divLR.
+  - by rewrite -expnD addnC.
+  - by rewrite /Word_N -word.prednK_modulus.
 Qed.
 
 #[program]
@@ -150,7 +152,7 @@ Definition mkciph (m: Word) (r: Key): Ciph :=
 Next Obligation.
   apply: (@leq_trans (r * Word_N + Word_N)).
   - by rewrite ltn_add2l.
-  - by rewrite /Ciph_N expnD addnC -mulSn mulnC leq_pmul2l ?PositiveExp2.
+  - by rewrite /Ciph_N expnD addnC -mulSn mulnC leq_pmul2l // /Word_N -word.prednK_modulus.
 Qed.
 
 Lemma mkciph_ciph_to_pair (c: Ciph):
@@ -168,7 +170,7 @@ Proof.
   f_equal.
   all: apply: ord_inj => /=.
   - by rewrite modnMDl modn_small.
-  - by rewrite divnMDl ?PositiveExp2 ?divn_small ?addn0.
+  - by rewrite divnMDl ?divn_small ?addn0 // /Word_N -word.prednK_modulus.
 Qed.
 
 Lemma mkciph_eq (m m': Word) (r r': Key):
@@ -201,12 +203,12 @@ Notation " 'key " := (Key) (at level 2): package_scope.
 Notation " 'ciph " := (Ciph) (in custom pack_type at level 2).
 Notation " 'ciph " := (Ciph) (at level 2): package_scope.
 
-Definition k_loc: Location := (0, 'option 'key).
-Definition T_loc: Location := (1, chMap 'ciph 'ciph).
-Definition Tinv_loc: Location := (2, chMap 'ciph 'ciph).
-Definition Tinv'_loc: Location := (3, chMap 'ciph 'ciph).
-Definition S_loc: Location := (4, 'set 'ciph).
-Definition R_loc: Location := (5, 'set 'key).
+Definition k_loc := mkloc 0 (None : option 'key).
+Definition T_loc := mkloc 1 (emptym : chMap 'ciph 'ciph).
+Definition Tinv_loc := mkloc 2 (emptym : chMap 'ciph 'ciph).
+Definition Tinv'_loc := mkloc 3 (emptym : chMap 'ciph 'ciph).
+Definition S_loc := mkloc 4 (emptym : 'set 'ciph).
+Definition R_loc := mkloc 5 (emptym : 'set 'key).
 Definition samp: nat := 6.
 Definition ctxt: nat := 7.
 Definition decrypt: nat := 8.
@@ -217,7 +219,7 @@ Definition invlookup: nat := 10.
   The [SAMP] packages define sampling with ([true]), and without ([false])
   replacement.
 *)
-Definition SAMP_pkg_tt (p: nat) `{Positive p}:
+Definition SAMP_pkg_tt (p: nat) :
   package [interface]
     [interface
       #val #[samp]: 'set ('fin p) → ('fin p) ] :=
@@ -228,7 +230,7 @@ Definition SAMP_pkg_tt (p: nat) `{Positive p}:
     }
   ].
 
-Definition SAMP_pkg_ff (p: nat) `{Positive p}:
+Definition SAMP_pkg_ff (p: nat) :
   package [interface]
     [interface
       #val #[samp]: 'set ('fin p) → ('fin p) ] :=
@@ -239,7 +241,7 @@ Definition SAMP_pkg_ff (p: nat) `{Positive p}:
     }
   ].
 
-Definition SAMP (p: nat) `{Positive p} b :=
+Definition SAMP (p: nat) b :=
   if b then (SAMP_pkg_tt p) else (SAMP_pkg_ff p).
 
 Definition kgen: raw_code 'key :=

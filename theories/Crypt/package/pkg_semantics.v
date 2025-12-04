@@ -36,16 +36,15 @@ Arguments ropr {_ _ _} _ _.
 (** Interpretation of raw codes into the semantic model
 
   Note that we don't require any validity proof to do so,
-  instead we rely on the fact that types in the choice_type are all
-  inhabited.
-
+  instead we rely on the fact that we can sample from the
+  null distribution `dnull`.
 *)
 Fixpoint repr {A : choiceType} (p : raw_code A) :
   rFreeF (@ops_StP heap) (@ar_StP heap) A :=
   match p with
   | ret x => retrFree x
   | opr o x k =>
-      repr (k (chCanonical (chtgt o)))
+      ropr (op_iota (_; dnull)) (λ v, repr (k v))
   | getr l k =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s l)))
@@ -67,7 +66,7 @@ Proof.
   intros A B p f.
   induction p in f |- *.
   - cbn. reflexivity.
-  - simpl. auto.
+  - simpl. f_equal. extensionality y. auto.
   - simpl. f_equal. extensionality x. auto.
   - simpl. f_equal. extensionality x. f_equal. extensionality y. auto.
   - simpl. f_equal. extensionality x. auto.
@@ -76,7 +75,8 @@ Qed.
 Definition repr_cmd {A} (c : command A) :
   rFreeF (@ops_StP heap) (@ar_StP heap) A :=
   match c with
-  | cmd_op o x => retrFree (chCanonical (chtgt o))
+  | cmd_op o x =>
+      ropr (op_iota (_; dnull)) retrFree
   | cmd_get ℓ =>
       bindrFree
         (ropr gett (λ s, retrFree (get_heap s ℓ)))

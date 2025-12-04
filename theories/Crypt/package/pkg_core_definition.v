@@ -43,11 +43,13 @@ tgt : choice_type
 
 Definition mkopsig id S T : opsig := (id, (S, T)).
 
-Definition Location := nat * choice_type.
+Definition Location := nat * (∑ T : choice_type, T).
 
-Definition Locations := {fmap nat → choice_type}.
+Definition Locations := {fmap nat → ∑ T : choice_type, T}.
 
-Definition loc_type (l : Location) := l.2.
+Definition mkloc (n : nat) {T : choice_type} (t : T) : Location := (n, (T ; t)).
+
+Definition loc_type (l : Location) := projT1 l.2.
 
 Coercion loc_type : Location >-> choice_type.
 

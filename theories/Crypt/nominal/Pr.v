@@ -97,15 +97,19 @@ Section PrCodeLemmas.
     Pr_code (#put l := a ;; k) h = Pr_code k (set_heap h l a).
   Proof. cbn; done. Qed.
 
-  Lemma Pr_code_call {B : choiceType} {o : opsig} {a : src o}
-      {k : tgt o → raw_code B} {h} :
-    Pr_code (x ← op o ⋅ a ;; k x) h = Pr_code (k (chCanonical _)) h.
-  Proof. cbn; done. Qed.
-
   Lemma Pr_code_sample {A : choiceType} {op' : Op}
       {k : Arit op' → raw_code A} {h} :
     Pr_code (x ← sample op' ;; k x) h = \dlet_(x <- op'.π2) Pr_code (k x) h.
   Proof. cbn. rewrite /SubDistr.SDistr_obligation_2 2!SDistr_rightneutral //. Qed.
+
+  Lemma Pr_code_call {B : choiceType} {o : opsig} {a : src o}
+      {k : tgt o → raw_code B} {h} :
+    Pr_code (x ← op o ⋅ a ;; k x) h = dnull.
+  Proof.
+    transitivity (\dlet_(x <- dnull) Pr_code (k x) h).
+    - cbn; rewrite /SubDistr.SDistr_obligation_2 2!SDistr_rightneutral //.
+    - rewrite dlet_null_ext //.
+  Qed.
 
   Lemma Pr_code_bind {T T' : choiceType} {c} {f : T → raw_code T'} {h}
     : Pr_code (x ← c ;; f x) h
@@ -114,7 +118,7 @@ Section PrCodeLemmas.
     move: h.
     induction c; cbn [bind]; intros h.
     - rewrite Pr_code_ret dlet_unit_ext //.
-    - rewrite 2!Pr_code_call //.
+    - rewrite 2!Pr_code_call dlet_null_ext //.
     - rewrite 2!Pr_code_get //.
     - rewrite 2!Pr_code_put //.
     - rewrite 2!Pr_code_sample dlet_dlet_ext.
@@ -329,7 +333,7 @@ Lemma set_heap_rename π h l v : set_heap (π ∙ h) (π ∙ l) v = π ∙ set_h
 Proof.
   rewrite /set_heap.
   apply eq_fmap => n.
-  replace n with (@rename Location π (π^-1 ∙ ((n, chUnit)))).1.
+  replace n with (@rename Location π (π^-1 ∙ mkloc n tt)).1.
   2: rewrite renameKV //.
   rewrite setmE mapm2E ?mapm2E ?setmE.
   2,3: eapply can_inj, (can_comp natizeK), (can_comp (fpermK _)), atomizeK.
@@ -359,7 +363,7 @@ Proof.
       move: E' => /eqP E' //.
     + by subst.
     + by rewrite -(renameK π (h : heap)) E' renameK in E.
-  - rewrite 2!Pr_code_call H //.
+  - rewrite 2!Pr_code_call 2!dnullE //.
   - by rewrite 2!Pr_code_get get_heap_rename.
   - by rewrite 2!Pr_code_put set_heap_rename.
   - rewrite 2!Pr_code_sample 2!dletE.
@@ -369,7 +373,13 @@ Qed.
 
 Lemma coerce_kleisli_rename {A A' B B'} π g x
   : π ∙ @coerce_kleisli A A' B B' g x = coerce_kleisli (λ x, π ∙ g x) x.
-Proof. by rewrite /coerce_kleisli -2!lock mcode_bind. Qed.
+Proof.
+  rewrite /coerce_kleisli -2!lock /coerce_code mcode_bind.
+  destruct (coerce x) => /=.
+  2: f_equal; extensionality a.
+  1,2: rewrite mcode_bind.
+  1,2: f_equal; extensionality b; move: (coerce b) => [] //.
+Qed.
 
 Lemma resolve_rename π P F x
   : π ∙ (resolve P F x) = resolve (π ∙ P) F x.

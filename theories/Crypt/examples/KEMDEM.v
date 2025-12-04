@@ -129,11 +129,11 @@ Section KEMDEM.
   Definition PKDEC := 5%N.
 
   (** Memory locations *)
-  Definition k_loc : Location := (0, 'option 'key).
-  Definition pk_loc : Location := (1, 'option 'pkey).
-  Definition sk_loc : Location := (2, 'option 'skey).
-  Definition ek_loc : Location := (3, 'option 'ekey).
-  Definition c_loc : Location := (4, 'option 'cipher).
+  Definition k_loc := mkloc 0 (None : option 'key).
+  Definition pk_loc := mkloc 1 (None : option 'pkey).
+  Definition sk_loc := mkloc 2 (None : option 'skey).
+  Definition ek_loc := mkloc 3 (None : 'option 'ekey).
+  Definition c_loc := mkloc 4 (None : option 'cipher).
 
   (** Some shorthands *)
   Definition IGEN := [interface #val #[ GEN ] : 'unit → 'unit ].

@@ -18,7 +18,7 @@ Section Test.
   Import PackageNotation.
   #[local] Open Scope package_scope.
 
-  #[local] Definition loc : Location :=  (1, 'nat)%N.
+  #[local] Definition loc := mkloc 1 (0 : nat).
   #[local] Definition locs : Locations := [fmap loc].
 
   #[local] Definition test_prog_sub (x : nat):

@@ -3,7 +3,7 @@
 
 From Coq Require Import Utf8 Lia.
 Set Warnings "-notation-overridden".
-From mathcomp Require Import ssreflect eqtype ssrbool ssrnat.
+From mathcomp Require Import all_ssreflect word.
 Set Warnings "notation-overridden".
 From HB Require Import structures.
 From extructures Require Import ord fset.
@@ -98,15 +98,6 @@ Proof.
   - move: e => /eqP. auto.
 Defined.
 
-(** Notion of positive natural number
-
-  Usage: Simply write [mkpos n] to turn [n] into a positive natural number.
-  The positivity proof should be inferred by the [lia] tactic or some other
-  means.
-*)
-Class Positive (n : nat) : Prop :=
-  is_positive : 0 < n.
-
 Ltac nat_reify :=
   repeat match goal with
   | h : is_true (_ < _) |- _ => move: h => /ltP h
@@ -114,73 +105,6 @@ Ltac nat_reify :=
   | h : is_true (_ == _) |- _ => move: h => /eqP h
   end.
 
-#[export] Hint Extern 1 (Positive ?n) =>
-  reflexivity : typeclass_instances.
-
-#[export] Hint Extern 2 (Positive ?n) =>
-  unfold Positive ; apply/ltP ; lia : typeclass_instances.
-
-#[export] Hint Extern 4 (Positive ?n) =>
-  unfold Positive ; apply/ltP ; nat_reify ; lia : typeclass_instances.
-
-#[export] Instance PositiveExp2 n : Positive (2^n)%N.
-Proof.
-  unfold Positive. apply/ltP. induction n.
-  - auto.
-  - rewrite expnS. rewrite mulSnr. rewrite mulSnr.
-    change (0 * ?n) with 0.
-    set (m := 2^n) in *. clearbody m. cbn.
-    rewrite -?addnE. rewrite -plusE.
-    lia.
-Qed.
-
-Lemma Positive_prod :
-  ∀ {n m},
-    Positive n →
-    Positive m →
-    Positive (n * m).
-Proof.
-  intros n m hn hm.
-  unfold Positive in *.
-  eapply leq_trans. 2: eapply leq_pmull. all: auto.
-Qed.
-
-(* Instance Positive_prod {n m} `{Positive n} `{Positive m} :
-    Positive (n * m).
-Proof.
-  unfold Positive in *.
-  eapply leq_trans. 2: eapply leq_pmull. all: auto.
-Qed. *)
-
-#[export] Hint Extern 2 (Positive (?n * ?m)) =>
-  eapply Positive_prod : typeclass_instances.
-
-Record positive := mkpos {
-  pos : nat ;
-  cond_pos : Positive pos
-}.
-Arguments mkpos _ {_}.
-
-Coercion pos : positive >-> nat.
-
-#[export] Hint Extern 1 (Positive ?n.(pos)) =>
-  eapply cond_pos
-  : typeclass_instances.
-
-Definition positive_eq : rel positive :=
-  λ u v, u.(pos) == v.(pos).
-
-Lemma positive_eqP : Equality.axiom positive_eq.
-Proof.
-  intros [n hn] [m hm]. unfold positive_eq. simpl.
-  destruct (n == m) eqn:e.
-  - move: e => /eqP e. subst. left.
-    f_equal. apply eq_irrelevance.
-  - move: e => /eqP e. right.
-    intro h. apply e. inversion h. reflexivity.
-Qed.
-
-HB.instance Definition _ := hasDecEq.Build _ positive_eqP.
 
 (** Lt class, for finite types  *)
 
@@ -188,7 +112,7 @@ Class Lt n m :=
   is_in_fin : n < m.
 
 #[export] Hint Extern 1 (Lt ?n ?m) =>
-  reflexivity : typeclass_instances.
+  done : typeclass_instances.
 
 #[export] Hint Extern 2 (Lt ?n ?m) =>
   unfold Lt ; apply/ltP ; lia : typeclass_instances.
@@ -196,53 +120,15 @@ Class Lt n m :=
 #[export] Hint Extern 4 (Lt ?n) =>
   unfold Lt ; apply/ltP ; nat_reify ; lia : typeclass_instances.
 
-#[export] Instance Positive_Lt n `{h : Positive n} : Lt 0 n.
-Proof.
-  auto.
-Qed.
+#[export] Instance Lt_card_r {n m} : Lt n m → Lt n #|'I_m|.
+Proof. by rewrite card_ord. Qed.
 
-Definition PositiveInFin n m (h : Lt n m) : Positive m.
-Proof.
-  unfold Lt in h. exact _.
-Qed.
+#[export] Instance Lt0_expn2 {n} : Lt 0 (2 ^ n).
+Proof. by rewrite -prednK_modulus. Qed.
 
-(* We use a hint to avoid a loop with Positive_Lt *)
-#[export] Hint Extern 8 (Positive ?m) =>
-  match goal with
-  | h : Lt ?n m |- _ => exact (PositiveInFin n m h)
-  end
-  : typeclass_instances.
+#[export] Instance Lt0_muln {n m} : Lt 0 n → Lt 0 m → Lt 0 (n * m).
+Proof. move: n m => [|n] [|m] //. Qed.
 
-Lemma positive_ext :
-  ∀ (p q : positive),
-    p.(pos) = q.(pos) →
-    p = q.
-Proof.
-  intros [p hp] [q hq] e.
-  cbn in e. subst.
-  f_equal. apply eq_irrelevance.
-Qed.
-
-(** Tactic to unfold all positives (NEEDED?) *)
-Ltac unfold_positives :=
-  repeat match goal with
-  | p : positive |- _ =>
-    let n := fresh "p" in
-    let h := fresh "h" in
-    destruct p as [n h] ;
-    repeat change (pos {| pos := n ; cond_pos := h |}) with n in *
-  end.
-
-#[export] Instance PositiveEqDec n : EqDec (Positive n).
-Proof.
-  left. apply eq_irrelevance.
-Qed.
-
-Derive NoConfusion NoConfusionHom for positive.
-
-(* Utility for defining functions with Equations *)
-Definition inspect {A : Type} (x : A) : { y : A | y = x } :=
-  exist _ x Logic.eq_refl.
 
 (** Hints notation
 

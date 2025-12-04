@@ -61,21 +61,9 @@ Module tSDH (GP : GroupParam).
 
   Definition GroupSpace : finType := gT.
 
-  #[local] Instance GroupSpace_pos : Positive #|GroupSpace|.
-  Proof.
-    apply /card_gt0P; by exists g.
-  Defined.
-
-  #[local] Instance order_pos : Positive #[g].
-  Proof.
-    move : prime_order => /prime_gt1 Hprime.
-    unfold Positive. auto.
-  Qed.
-
   Definition gt_than_1 : (#[g] > 1)%N.
   Proof.
-    move : prime_order => /prime_gt1 Hprime.
-    unfold Positive. auto.
+    move : prime_order => /prime_gt1 Hprime. auto.
   Qed.
 
   Definition chGroup : choice_type := 'fin #|GroupSpace|.
@@ -117,7 +105,7 @@ Module tSDH (GP : GroupParam).
   Definition inv_sum (c a : chExp) : nat :=
     1 / (mod_p (c + a)).
 
-  Definition secret_loc : Location := (33, chExp).
+  Definition secret_loc := mkloc 33 (None : option chExp).
 
   Definition tSDH_loc := [fmap secret_loc ].
 
@@ -133,33 +121,36 @@ Module tSDH (GP : GroupParam).
         #def #[ set_up ] (_: 'unit) : 'list
         {
           a ← sample uniform i_space ;;
-          #put secret_loc := a ;;
+          #put secret_loc := Some a ;;
           let instc := make_pk g a in
           ret (fmap_of_seq instc)
         } ;
 
         #def #[ guess ] ('(c, g') : ('exp × 'group)) : 'bool
         {
-          a ← get secret_loc ;;
-          let exp_g := inv_sum c a in
-          ret (fto (g ^+ exp_g) == g')
+          oa ← get secret_loc ;;
+          match oa with
+          | Some(a) =>
+            let exp_g := inv_sum c a in
+            ret (fto (g ^+ exp_g) == g')
+          | None => ret false
+          end
         }
       ].
   
   Definition tSDH_ff :
   package [interface] tSDH_E :=
-    [package tSDH_loc;
+    [package emptym;
       #def #[ set_up ] (_: 'unit) : 'list
       {
         a ← sample uniform i_space ;;
-        #put secret_loc := a ;;
         let instc := make_pk g a in
         ret (fmap_of_seq instc)
       } ;
 
       #def #[ guess ] ('(c, g') : ('exp × 'group)) : 'bool
       {
-        ret (false)
+        ret false
       }
     ].
 
