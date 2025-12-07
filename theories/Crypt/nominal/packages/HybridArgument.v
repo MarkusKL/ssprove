@@ -162,3 +162,41 @@ Proof.
     apply ltnW in H'.
     apply Num.Theory.lerD; auto.
 Qed.
+
+
+Ltac replace_true e :=
+  progress ( replace e with true in * by (symmetry; apply /ltP; lia) ).
+
+Ltac replace_false e :=
+  progress ( replace e with false in * by (symmetry; apply /ltP; lia) ).
+
+Lemma hybrid_cases (c i : nat) (T : Type) :
+  ((c < i)%coq_nat → T) →
+  ((c = i) → T) →
+  ((c = i.+1) → T) →
+  ((c > i.+1)%coq_nat → T) →
+  T.
+Proof.
+  intros H1 H2 H3 H4.
+  destruct (c < i)%N eqn:E1; move: E1 => /ltP // E1.
+  destruct (c == i)%B eqn:E2; move: E2 => /eqP // E2.
+  destruct (c == i.+1)%B eqn:E3; move: E3 => /eqP // E3.
+  destruct (c > i.+1)%N eqn:E4; move: E4 => /ltP // E4. lia.
+Qed.
+
+Ltac replace_next :=
+  match goal with
+  | |- context[ (?n <= ?m)%N ] =>
+      try replace_true (n <= m)%N ;
+      try replace_false (n <= m)%N
+  end.
+
+Ltac replace_many := repeat replace_next.
+
+Ltac hybrid_cases c i :=
+  apply (hybrid_cases c i) => ? ;
+  [ replace_many
+  | subst ; replace_many
+  | subst ; replace_many
+  | replace_many
+  ].

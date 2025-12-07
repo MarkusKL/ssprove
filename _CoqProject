@@ -88,7 +88,7 @@ theories/Crypt/nominal/Adv.v
 theories/Crypt/nominal/NominalPrelude.v
 theories/Crypt/nominal/packages/TotalProbability.v
 theories/Crypt/nominal/packages/HybridArgument.v
-# theories/Crypt/nominal/packages/Guess.v
+theories/Crypt/nominal/packages/Guess.v
 
 # Examples of assumptions
 theories/Crypt/examples/Assumptions/DDH.v

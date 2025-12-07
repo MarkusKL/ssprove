@@ -9,7 +9,7 @@ Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 From SSProve.Crypt Require Import Axioms SubDistr pkg_composition
-  Prelude Package Nominal NominalPrelude HybridArgument.
+  Prelude Package Nominal NominalPrelude TotalProbability HybridArgument.
 
 From HB Require Import structures.
 
@@ -166,33 +166,36 @@ Proof.
     apply le1_mu.
 Qed.
 
+Lemma Adv_nom_ind_Pr {I} {G G' A : nom_package} {P : R → Type} :
+  (∀ (A : raw_code bool) LA, ValidCode LA I A →
+    fseparate LA (loc G) →
+    fseparate LA (loc G') →
+    P (`| Pr_rand (code_link A G) true
+        - Pr_rand (code_link A G') true |)%R
+  ) →
+  ValidPackage (loc A) I A_export A →
+  P (Adv G G' A).
+Proof.
+  intros HP  VA. eapply (Adv_nom_ind _ _ _ I) => //.
+  move=> A' LA VA' _ SEP1 SEP2.
+  assert (H' : fhas A_export RUN); [ fmap_solve |].
+  pose proof (valid_resolve _ _ _ _ RUN tt VA' H').
+  rewrite /AdvantageE 2!Pr_Pr_rand 2!resolve_link.
+  eapply HP; eassumption.
+Qed.
+
 Lemma Adv_GUESS {A} {n} `{Positive n} :
   ValidPackage (loc A) (IGUESS n) A_export A →
   (AdvOf (GUESS n) A <= n%:R^-1)%R.
 Proof.
   intros VA.
-  pose (π := fresh ([fmap done] : Locations, as_nom (GUESS n true), as_nom (GUESS n false)) (A, loc A)).
-  rewrite -{1}(@rename_alpha _ A π).
-  unfold Adv.
-  rewrite {1}/Pr' -link_sep_link.
-  2: eauto with nominal_db.
-  rewrite {1}/Pr' -link_sep_link.
-  2: eauto with nominal_db.
-  rewrite 2!Pr_Pr_rand 2!resolve_link.
-
-  apply (rename_valid π) in VA.
-  assert (H' : fhas A_export RUN); [ fmap_solve |].
-  pose proof (valid_resolve _ _ _ _ RUN tt VA H').
-
+  apply (@Adv_nom_ind_Pr (IGUESS n) (GUESS n true) (GUESS n false)).
+  2: done. move=> {}A LA {}VA SEP1 SEP2.
   rewrite Num.Theory.ler_distlC.
   apply /andP; split.
   - rewrite Num.Theory.lerBlDr.
-    apply: Pr_GUESS.
-    rewrite fseparate_disj.
-    eauto with nominal_db.
-  - apply: Pr_GUESS.
-    rewrite fseparate_disj.
-    eauto with nominal_db.
+    by apply: Pr_GUESS.
+  - by apply: Pr_GUESS.
 Qed.
 
 Definition IGUESSL n `{Positive n} :=
@@ -266,7 +269,6 @@ Lemma guess_hyb l n `{Positive n} A :
 Proof.
   intros VA.
   eapply (Adv_hybrid (Multi := λ b, GUESSL n l b) (Game := λ b, GUESS n b)).
-  1-4: ssprove_valid.
   1,2: apply Multi_pf.
   intros i _.
   ssprove_share. eapply prove_perfect.
@@ -367,7 +369,7 @@ Definition CReplacement n `{Positive n} k b : nom_package :=
 
 Lemma replace_hyb_0 {n} `{Positive n} {q} :
   perfect (IReplacement n) (CReplacement n q true)
-    (HReplacement n q 0 ∘ GUESSL n 0 true).
+    (HReplacement n q 0 ∘ GUESSL n 0 false).
 Proof.
   unfold CReplacement. ssprove_share. eapply prove_perfect.
   eapply (eq_rel_perf_ind _ _ (heap_ignore [fmap prev_loc n; done ]
@@ -401,15 +403,13 @@ Proof.
     apply r_put_vs_put.
     ssprove_sync => r.
     ssprove_restore_mem.
-    { ssprove_invariant.
-      intros H'. apply ltnW, H'.
-    }
+    { ssprove_invariant. }
     by apply r_ret.
 Qed.
 
 Lemma replace_hyb_q {n} `{Positive n} {q} :
   perfect (IReplacement n) (CReplacement n q false)
-    (HReplacement n q q ∘ GUESSL n q true).
+    (HReplacement n q q ∘ GUESSL n q false).
 Proof.
   unfold CReplacement. ssprove_share. eapply prove_perfect.
   apply eq_rel_perf_ind_eq.
@@ -426,26 +426,6 @@ Proof.
   intros [? ?] [? ?] E. by noconf E.
 Qed.
 
-Lemma hybrid_cases (c i : nat) (T : Type) :
-  ((c < i)%coq_nat → T) →
-  ((c = i) → T) →
-  ((c = i.+1) → T) →
-  ((c > i.+1)%coq_nat → T) →
-  T.
-Proof.
-  intros H1 H2 H3 H4.
-  destruct (c < i)%N eqn:E1; move: E1 => /ltP // E1.
-  destruct (c == i)%B eqn:E2; move: E2 => /eqP // E2.
-  destruct (c == i.+1)%B eqn:E3; move: E3 => /eqP // E3.
-  destruct (c > i.+1)%N eqn:E4; move: E4 => /ltP // E4. lia.
-Qed.
-
-Ltac replace_true e :=
-  progress ( replace e with true in * by (symmetry; apply /ltP; lia) ).
-
-Ltac replace_false e :=
-  progress ( replace e with false in * by (symmetry; apply /ltP; lia) ).
-
 Lemma replace_hyb_i {n} `{Positive n} {q i} : i < q →
   perfect (IReplacement n) (HReplacement n q i ∘ GUESSL n i true)
     (HReplacement n q i.+1 ∘ GUESSL n i.+1 false).
@@ -454,6 +434,7 @@ Proof.
   unfold CReplacement. ssprove_share. eapply prove_perfect.
   eapply (eq_rel_perf_ind _ _ (heap_ignore [fmap prev_loc n; done ]
     ⋊ couple_lhs count_loc (prev_loc n) (λ c prev, length prev <= c)%N
+    ⋊ couple_rhs count_loc (prev_loc n) (λ c prev, length prev <= c)%N
     ⋊ rel_app [:: (lhs, count_loc); (lhs, prev_loc n); (rhs, prev_loc n)]
       (λ c pl pr, c < i.+1 → pl = pr)
     ⋊ couple_lhs count_loc done (λ c d, (c > i)%N = d)%N
@@ -468,21 +449,18 @@ Proof.
   apply r_get_remember_lhs => prev.
   apply r_get_remember_rhs => prev'.
   ssprove_rem_rel 2%N => Hprev.
-  apply (hybrid_cases c i) => H''.
-  - replace_true (c < i) => /=.
-    replace_true (c < i.+1) => /=.
-    rewrite -Hprev {Hprev prev'} //.
+  hybrid_cases c i.
+  - rewrite -Hprev {Hprev prev'} //=.
+    2: replace_many => //.
     apply r_put_vs_put.
+    replace_many.
     ssprove_sync => r.
     ssprove_sync => Hr.
     apply r_put_vs_put.
     ssprove_restore_mem.
-    { ssprove_invariant; admit. }
+    { ssprove_invariant; by replace_many. }
     by apply r_ret.
-  - subst.
-    replace_false (i < i) => /=.
-    replace_true (i < i.+1) => /=.
-    rewrite -Hprev {Hprev prev'} //.
+  - rewrite -Hprev {Hprev prev'} //=.
     ssprove_code_simpl_more.
     ssprove_swap_lhs 1%N.
     ssprove_swap_lhs 0%N.
@@ -490,8 +468,36 @@ Proof.
     ssprove_rem_rel 1%N.
     replace_false (i < i) => <- /=.
     ssprove_rem_rel 3%N => -> /=.
-
-Admitted.
+    apply r_put_vs_put.
+    apply r_put_lhs.
+    replace_many.
+    ssprove_sync => x.
+    ssprove_sync => Hprev.
+    apply r_put_rhs.
+    ssprove_restore_mem.
+    { ssprove_invariant; by replace_many. }
+    by apply r_ret.
+  - simpl. replace_many.
+    ssprove_code_simpl_more.
+    ssprove_swap_rhs 1%N.
+    ssprove_swap_rhs 0%N.
+    apply r_get_remember_rhs => d.
+    ssprove_rem_rel 0%N.
+    replace_next => {d}<-.
+    ssprove_rem_rel 3%N => -> /=.
+    apply r_put_vs_put.
+    apply r_put_rhs.
+    ssprove_sync => x.
+    ssprove_restore_mem.
+    { ssprove_invariant; by replace_many. }
+    by apply r_ret.
+  - apply r_put_vs_put => //=.
+    replace_many.
+    ssprove_sync => x.
+    ssprove_restore_mem.
+    { ssprove_invariant; by replace_many. }
+    by apply r_ret.
+Qed.
 
 Lemma replace_hyb2 q n `{Positive n} A : 
   ValidPackage (loc A) (IReplacement n) A_export A →
@@ -506,16 +512,22 @@ Proof.
   1: intros i _; rewrite GRing.mulr_natl; over.
   eapply Order.le_trans. {
     eapply (Adv_hybrid_dep
-      (Game := λ i b, HReplacement n q i ∘ GUESSL n i b)%sep).
-    1,2,3: intros; ssprove_valid.
+      (Game := λ i b, HReplacement n q i ∘ GUESSL n i (~~ b))%sep).
     1: apply replace_hyb_0.
     1: apply replace_hyb_q.
-    1: intros. by apply replace_hyb_i. }
+    intros i Hi.
+    1: by apply replace_hyb_i.
+  }
   apply Num.Theory.ler_sum_nat => i H'.
   rewrite Adv_reduction.
+  rewrite Adv_sym.
   rewrite guess_hyb.
   rewrite Num.Theory.lerMn2r.
   apply /orP; right.
   apply Adv_GUESS.
   ssprove_valid.
+  Unshelve.
+  - ssprove_valid.
+  - intros. cbn beta. ssprove_valid.
+  - intros. cbn beta. ssprove_valid.
 Qed.

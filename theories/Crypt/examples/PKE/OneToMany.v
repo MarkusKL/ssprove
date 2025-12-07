@@ -151,27 +151,6 @@ Notation inv' i := (
   ⋊ couple_rhs count_loc count_loc' (R i.+1)
 ).
 
-Ltac replace_true e :=
-  progress ( replace e with true in * by (symmetry; apply /ltP; lia) ).
-
-Ltac replace_false e :=
-  progress ( replace e with false in * by (symmetry; apply /ltP; lia) ).
-
-Lemma hybrid_cases (c i : nat) (T : Type) :
-  ((c < i)%coq_nat → T) →
-  ((c = i) → T) →
-  ((c = i.+1) → T) →
-  ((c > i.+1)%coq_nat → T) →
-  T.
-Proof.
-  intros H1 H2 H3 H4.
-  destruct (c < i)%N eqn:E1; move: E1 => /ltP // E1.
-  destruct (c == i)%B eqn:E2; move: E2 => /eqP // E2.
-  destruct (c == i.+1)%B eqn:E3; move: E3 => /eqP // E3.
-  destruct (c > i.+1)%N eqn:E4; move: E4 => /ltP // E4. lia.
-Qed.
-
-
 Lemma SLIDE_succ_perfect {n} {i} : perfect (I_CPA P)
   (SLIDE n ∘ (OT_CPA P false || PICK i   ))
   (SLIDE n ∘ (OT_CPA P true  || PICK i.+1)).
@@ -205,26 +184,17 @@ Proof.
     intros mpk.
     ssprove_swap_lhs 0%N; ssprove_swap_rhs 0%N.
     ssprove_sync => H'.
-    apply (hybrid_cases c i) => E.
-    + replace_true (c < i).
-      replace_true (c < i.+1).
-      apply r_put_vs_put.
+    hybrid_cases c i.
+    + apply r_put_vs_put.
       apply rsame_head_scheme => x.
       ssprove_restore_mem.
-      2: by apply r_ret.
-      ssprove_invariant; unfold R.
-      * replace_false (i < c).
-        by replace_false (i < c.+1).
-      * replace_false (i.+1 < c).
-        by replace_false (i.+1 < c.+1).
-    + subst; replace_false (i < i).
-      ssprove_code_simpl.
+      { ssprove_invariant; unfold R; by replace_many. }
+      by apply r_ret.
+    + ssprove_code_simpl.
       ssprove_swap_lhs 0%N.
       apply r_get_remember_lhs => c'.
       ssprove_rem_rel 1%N.
-      rewrite //= /R.
-      replace_false (i < i).
-      move=> -> {c'}.
+      rewrite //= /R ltnn => -> {c'}.
       ssprove_code_simpl_more.
       ssprove_code_simpl.
       ssprove_code_simpl_more.
@@ -234,24 +204,15 @@ Proof.
       apply r_put_vs_put.
       apply r_put_lhs.
       rewrite H' //=.
-      replace_true (i < i.+1).
       apply rsame_head_scheme => x.
       ssprove_restore_mem.
-      2: by apply r_ret.
-      ssprove_invariant.
-      * by replace_true (eqn (i.+1 - i.+1)%Nrec 0).
-      * replace_false (eqn (i.+2 - i.+1)%Nrec 0).
-        by replace_false (eqn (i.+2 - i)%Nrec 0).
-    + subst; replace_true (i < i.+1).
-      replace_false (i.+1 < i.+1).
-      replace_false (i.+1 < i).
-      ssprove_code_simpl.
+      { ssprove_invariant; by replace_many. }
+      by apply r_ret.
+    + ssprove_code_simpl.
       ssprove_swap_rhs 0%N.
       apply r_get_remember_rhs => c'.
       ssprove_rem_rel 0%N.
-      rewrite //= /R.
-      replace_false (i.+1 < i.+1).
-      move=> -> {c'}.
+      rewrite //= /R ltnn => -> {c'}.
       ssprove_code_simpl_more.
       ssprove_code_simpl.
       ssprove_code_simpl_more.
@@ -265,24 +226,13 @@ Proof.
       eapply rsame_head_scheme => x.
       ssprove_restore_mem.
       2: by apply r_ret.
-      ssprove_invariant.
-      * replace_true (eqn (i.+1 - i.+2)%Nrec 0).
-        by replace_true (eqn (i.+1 - i.+1)%Nrec 0).
-      * by replace_true (eqn (i.+2 - i.+2)%Nrec 0).
-    + replace_false (c < i).
-      replace_true (i < c).
-      replace_false (c < i.+1).
-      replace_true (i.+1 < c).
-      apply r_put_vs_put.
+      ssprove_invariant; by replace_many.
+    + apply r_put_vs_put.
       rewrite 2!code_link_scheme.
       apply rsame_head_scheme => c'.
       ssprove_restore_mem.
       2: by apply r_ret.
-      ssprove_invariant; unfold R.
-      * replace_true (i < c.+1).
-        by replace_true (i < c).
-      * replace_true (i.+1 < c).
-        by replace_true (i.+1 < c.+1).
+      ssprove_invariant; unfold R; by replace_many.
 Qed.
 
 #[local] Open Scope ring_scope.

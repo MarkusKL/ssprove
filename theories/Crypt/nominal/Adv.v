@@ -111,22 +111,41 @@ Proof. done. Qed.
 
 #[export] Hint Resolve supp_prod subs_refl : nominal_db.
 
+Lemma Adv_nom_ind (G G' A : nom_package) I {P : R → Type} :
+  (∀ (A' : raw_package) LA, ValidPackage LA I A_export A' →
+    val A ≡ A' →
+    fseparate LA (loc G) →
+    fseparate LA (loc G') →
+    P (AdvantageE G G' A')
+  ) →
+  ValidPackage (loc A) I A_export A →
+  P (Adv G G' A).
+Proof.
+  intros HP VA.
+  pose (π := fresh ((G, loc G), (G', loc G')) (loc A, A)).
+  replace (Adv G G' A) with (AdvantageE G G' (π ∙ A : nom_package)).
+  2: rewrite -{2}(@rename_alpha _ A π) //.
+  2: rewrite /Adv {1}/Pr' -link_sep_link.
+  3: eauto with nominal_db.
+  2: rewrite {1}/Pr' -link_sep_link //.
+  2: eauto with nominal_db.
+  eapply HP.
+  1: eapply rename_valid; apply VA.
+  1: symmetry; apply rename_alpha.
+  1,2: rewrite fseparate_disj ; eauto with nominal_db.
+Qed.
+
 Lemma Adv_adv_equiv {E} {G G' : nom_package} {ε : raw_package → R}
-  {V1 : ValidPackage (loc G) Game_import E G} {V2 : ValidPackage (loc G') Game_import E G'} :
+  {V1 : ValidPackage (loc G) Game_import E G}
+  {V2 : ValidPackage (loc G') Game_import E G'} :
   equivariant ε →
   G ≈[ ε ] G' →
   ∀ (A : nom_package), ValidPackage (loc A) E A_export A → Adv G G' A = ε A.
 Proof.
   intros equieps adv A VA.
-  pose (π := fresh ((loc G, G), (loc G', G')) (loc A, A)).
-  setoid_rewrite <- (@rename_alpha _ A π).
-  rewrite Adv_AdvantageE.
-  1: rewrite -(absorb π (ε A)).
-  1: rewrite equieps.
-  1: rewrite adv //.
-
-  1,2: rewrite fseparate_disj.
-  1-4: eauto with nominal_db nocore.
+  eapply Adv_nom_ind. 2: eassumption.
+  move=> A' LA {}VA [π EQ] SEP1 SEP2.
+  rewrite -(absorb π (ε A)) equieps EQ adv //.
 Qed.
 
 Lemma Adv_perf {E} {G G' : nom_package}

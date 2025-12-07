@@ -391,14 +391,14 @@ Proof.
       case: (eq_dec (m', k') (m, k)) => Heq.
       1: {
         case: Heq => [-> ->].
-        by rewrite !eq_refl /= eq_refl.
+        by rewrite !eq_refl /=.
       }
       move /eqP /negPf in Heq.
       rewrite Heq /=.
       rewrite xpair_eqE in Heq.
       case: (eq_dec m' m) => Heqm.
       * rewrite Heqm eq_refl /= in Heq*.
-        by rewrite Heq Hinv Heqt.
+        by rewrite Hinv Heqt.
       * move /eqP /negPf in Heqm.
         by rewrite Heqm Hinv.
   - ssprove_code_simpl.
