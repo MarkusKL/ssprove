@@ -8,8 +8,6 @@
   make it a hypothesis of the final statement [security_based_on_prf].
 *)
 
-From SSProve.Relational Require Import OrderEnrichedCategory GenericRulesSimple.
-
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   ssrnat ssreflect ssrfun ssrbool ssrnum eqtype choice seq.
@@ -19,6 +17,9 @@ From SSProve.Mon Require Import SPropBase.
 From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb
   pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude.
+
+From SSProve.Crypt Require Import
+  NominalPrelude TotalProbability HybridArgument.
 
 From extructures Require Import ord fset fmap.
 
@@ -184,13 +185,14 @@ Definition GEN_HYB_pkg i:
     }
   ].
 
-Definition GEN_HYB_EVAL_pkg i:
+Definition GEN_HYB_EVAL_pkg :
   package
-    [interface #val #[lookup]: 'word → 'word ]
+    (unionm [interface #val #[lookup]: 'word → 'word ] (IPICK nat))
     [interface #val #[query]: 'unit → 'word × 'word ] :=
   [package GEN_HYB_locs ;
     #def #[query] (_: 'unit): 'word × 'word {
       #import {sig #[lookup]: 'word → 'word } as lookup ;;
+      i ← call [pick] : { unit ~> nat } tt ;;
       count ← get count_loc ;;
       #put count_loc := count.+1 ;;
       if count < i then
@@ -208,8 +210,10 @@ Definition GEN_HYB_EVAL_pkg i:
   ].
 
 Lemma GEN_equiv_true:
-  GEN true ≈₀ GEN_HYB_pkg 0.
+  perfect [interface #val #[query]: 'unit → 'word × 'word ]
+    (GEN true) (GEN_HYB_pkg 0).
 Proof.
+  eapply prove_perfect.
   apply eq_rel_perf_ind_ignore with [fmap count_loc].
   1: fmap_solve.
   simplify_eq_rel m.
@@ -226,8 +230,10 @@ Qed.
   uninitialised when [count <= i].
 *)
 Lemma GEN_GEN_HYB_equiv i:
-  GEN_HYB_pkg i ≈₀ GEN_HYB_EVAL_pkg i ∘ EVAL true.
+  perfect [interface #val #[query]: 'unit → 'word × 'word ]
+    (GEN_HYB_pkg i) (GEN_HYB_EVAL_pkg ∘ (EVAL true || PICK i)).
 Proof.
+  ssprove_share. eapply prove_perfect.
   apply eq_rel_perf_ind with (
     (heap_ignore [fmap k_loc]) ⋊
     couple_rhs count_loc k_loc
@@ -267,8 +273,10 @@ Qed.
   uninitialised when [count <= i].
 *)
 Lemma GEN_GEN_HYB_EVAL_equiv i:
-  GEN_HYB_EVAL_pkg i ∘ EVAL false ≈₀ GEN_HYB_pkg i.+1.
+  perfect [interface #val #[query]: 'unit → 'word × 'word ]
+    (GEN_HYB_EVAL_pkg ∘ (EVAL false || PICK i)) (GEN_HYB_pkg i.+1).
 Proof.
+  ssprove_share. eapply prove_perfect.
   apply eq_rel_perf_ind with (
     (heap_ignore [fmap T_loc]) ⋊
     couple_lhs count_loc T_loc
@@ -315,38 +323,28 @@ Local Open Scope ring_scope.
   which an adversary can distinguish the PRF from a truly random function.
   Negligible by assumption.
 *)
-Definition prf_epsilon := Advantage EVAL.
+Definition prf_epsilon A := AdvOf EVAL A.
+Definition Ilookup := [interface #val #[lookup] : 'word → 'word ].
+Definition Iquery := [interface #val #[query]: 'unit → 'word × 'word ].
 
 (**
   First we prove a bound on the hybrid packages. Since [q] can be any number
   the bound is a sum of [prf_epsilon], and the proof is by induction.
 *)
-Theorem hyb_security_based_on_prf LA A q:
-  ValidPackage LA
-    [interface #val #[query]: 'unit → 'word × 'word ]
-    A_export A ->
-  fseparate LA EVAL_locs_tt ->
-  fseparate LA EVAL_locs_ff ->
-  fseparate LA GEN_HYB_locs ->
-  AdvantageE (GEN_HYB_pkg 0) (GEN_HYB_pkg q) A <=
-  \sum_(i < q) prf_epsilon (A ∘ GEN_HYB_EVAL_pkg i).
+Theorem hyb_security_based_on_prf A q
+  `{VA : ValidPackage (loc A) Iquery A_export A} :
+  Adv (GEN_HYB_pkg 0) (GEN_HYB_pkg q) A =
+    prf_epsilon (A ∘ GEN_HYB_EVAL_pkg ∘ (ID Ilookup || RAND (unif q))) *+ q.
 Proof.
-  move=> vA d1 d2 d3.
-  elim: q => [|q IHq].
-  1: by rewrite big_ord0 /AdvantageE GRing.subrr normr0.
-  ssprove triangle (GEN_HYB_pkg 0) [::
-    pack (GEN_HYB_pkg q) ;
-    GEN_HYB_EVAL_pkg q ∘ EVAL true ;
-    GEN_HYB_EVAL_pkg q ∘ EVAL false
-  ] (GEN_HYB_pkg q.+1) A
-  as ineq.
-  apply: le_trans.
-  1: by apply: ineq.
-  rewrite -> GEN_GEN_HYB_equiv by ssprove_valid.
-  rewrite -> GEN_GEN_HYB_EVAL_equiv by ssprove_valid.
-  rewrite 2!GRing.addr0 big_ord_recr lerD //.
-  by rewrite /prf_epsilon Advantage_E Advantage_link Advantage_sym.
+  eapply (Adv_hybrid (n := q)
+    (Multi := fun b => GEN_HYB_pkg (if b then 0 else q))
+    (Game := fun b => EVAL b)
+    (H := GEN_HYB_EVAL_pkg)).
+  3: intros i Hi; eapply perfect_trans.
+  1,2,4: apply GEN_GEN_HYB_equiv.
+  apply GEN_GEN_HYB_EVAL_equiv.
 Qed.
+
 
 (**
   The final statement requires a proof that [A ∘ GEN_HYB_pkg q] and [A ∘ GEN false]
@@ -354,28 +352,15 @@ Qed.
   adversary (and might not exist for some adversaries). We sidestep this issue
   by making it a hypothesis.
 *)
-Theorem security_based_on_prf LA A q:
-  ValidPackage LA
-    [interface #val #[query]: 'unit → 'word × 'word ]
-    A_export A ->
-  fseparate LA EVAL_locs_tt ->
-  fseparate LA EVAL_locs_ff ->
-  fseparate LA GEN_HYB_locs ->
-  AdvantageE (GEN_HYB_pkg q) (GEN false) A = 0 ->
-  Advantage GEN A <= \sum_(i < q) prf_epsilon (A ∘ GEN_HYB_EVAL_pkg i).
+Theorem security_based_on_prf A q:
+  ValidPackage (loc A) Iquery A_export A ->
+  perfect Iquery (GEN_HYB_pkg q) (GEN false) ->
+  AdvOf GEN A =
+    prf_epsilon (A ∘ GEN_HYB_EVAL_pkg ∘ (ID Ilookup || RAND (unif q))) *+ q.
 Proof.
-  move=> vA d1 d2 d3 GEN_equiv_false.
-  rewrite Advantage_E Advantage_sym.
-  ssprove triangle (GEN true) [::
-    pack (GEN_HYB_pkg 0) ;
-    pack (GEN_HYB_pkg q)
-  ] (GEN false) A
-  as ineq.
-  apply: le_trans.
-  1: by apply: ineq.
-  rewrite -> GEN_equiv_true by ssprove_valid.
-  rewrite -> GEN_equiv_false by ssprove_valid.
-  rewrite GRing.add0r GRing.addr0 hyb_security_based_on_prf //.
+  intros VA GEN_equiv_false. unfold prf_epsilon.
+  rewrite (Adv_perfect_l GEN_equiv_true) -(Adv_perfect_r GEN_equiv_false).
+  by apply hyb_security_based_on_prf.
 Qed.
 
 End PRFGEN_example.
