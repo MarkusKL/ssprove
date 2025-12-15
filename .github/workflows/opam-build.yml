@@ -51,7 +51,7 @@ jobs:
       - run: sudo apt-get update
       - name: Try to restore opam cache
         id: opam-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: "~/.opam"
           key: opam-${{github.base_ref}}-${{github.ref}}
