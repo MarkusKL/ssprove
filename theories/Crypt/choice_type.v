@@ -48,7 +48,9 @@ Inductive choice_type :=
 | chFin (n : nat)
 | chWord (nbits : wsize)
 | chList (A : choice_type)
-| chSum (A B : choice_type).
+| chSum (A B : choice_type)
+| chTuple (A: choice_type) (n : nat).
+
 
 Derive NoConfusion NoConfusionHom for choice_type.
 
@@ -97,6 +99,9 @@ HB.instance Definition _ nbits
 HB.instance Definition _ (A : choice_type) (T : Crypt.type A)
   := hasInterp.Build (chList A) (list T).
 
+HB.instance Definition _ (A : choice_type) (n : nat) (T : Crypt.type A)
+  := hasInterp.Build (chTuple A n) (n.-tuple T).
+
 HB.instance Definition _ (A B : choice_type)
   (T : Crypt.type A) (S : Crypt.type B)
   := hasInterp.Build (chSum A B) (T + S)%type.
@@ -114,6 +119,7 @@ Fixpoint chInterp (U : choice_type) : Crypt.type U :=
   | chWord nbits => word nbits
   | chList u => list (chInterp u)
   | chSum u v => (chInterp u + chInterp v)%type
+  | chTuple u n => n.-tuple (chInterp u)
   end.
 
 (* When a Crypt.type is found for an arbitrary type, the
